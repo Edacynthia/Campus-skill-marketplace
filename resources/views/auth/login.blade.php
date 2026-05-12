@@ -152,10 +152,14 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">PASSWORD</label>
                             <div class="relative">
-                                <input type="password" name="password" required
+                                <input type="password" name="password" id="password" required
                                        placeholder="••••••"
-                                       class="w-full px-4 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a] transition-all">
-                                <a href="#" class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[#1e3a8a] hover:underline">Forgot?</a>
+                                       class="w-full px-4 py-4 pr-12 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a] transition-all">
+                                <button type="button" 
+                                        onclick="togglePasswordVisibility('password')" 
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors">
+                                    <i id="password-toggle-icon" class="fa-solid fa-eye"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -192,4 +196,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function togglePasswordVisibility(fieldId) {
+            const field = document.getElementById(fieldId);
+            const icon = document.getElementById(fieldId + '-toggle-icon');
+            
+            if (field.type === 'password') {
+                field.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                field.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
 @endsection

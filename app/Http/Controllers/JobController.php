@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Job;
+use App\Models\JobApplication;
 use App\Models\User;
 
 class JobController extends Controller
@@ -97,17 +98,22 @@ class JobController extends Controller
     public function show($id)
     {
         $job = Job::with(['employer', 'applications.applicant'])->findOrFail($id);
-        
-        // Increment view count
-        $job->increment('views_count');
-        
+
+        // Only count views from non-owners and only once per session
+        $sessionKey = 'viewed_job_' . $id;
+        if (!session()->has($sessionKey) &&
+            (!auth()->check() || auth()->id() !== $job->employer_id)) {
+            $job->increment('views_count');
+            session()->put($sessionKey, true);
+        }
+
         // Get related jobs
         $relatedJobs = Job::where('category', $job->category)
             ->where('id', '!=', $job->id)
             ->where('status', 'active')
             ->take(4)
             ->get();
-        
+
         // Check if current user has already applied
         $userApplication = null;
         if (auth()->check()) {
@@ -115,15 +121,15 @@ class JobController extends Controller
                 ->where('applicant_id', auth()->id())
                 ->first();
         }
-        
+
         // If user is not authenticated, show limited view
         if (!auth()->check()) {
             session()->flash('info', 'Sign in to apply for jobs and save opportunities');
         }
-        
+
         return view('jobs.show', compact('job', 'relatedJobs', 'userApplication'));
     }
-    
+        
     public function apply(Request $request, $id)
     {
         if (!auth()->check()) {
@@ -259,9 +265,150 @@ return redirect()->route('jobs.show', $job->id)
     public function destroy($id)
     {
         $job = Job::where('employer_id', auth()->id())->findOrFail($id);
+        
+        // Check for pending applications
+        $pendingApplicationsCount = JobApplication::where('job_id', $job->id)
+            ->where('status', 'pending')
+            ->count();
+            
+        if ($pendingApplicationsCount > 0) {
+            return redirect()->route('dashboard')
+                ->with('error', "Cannot delete job. You have {$pendingApplicationsCount} unreviewed application(s). Please review all applications before deleting the job.");
+        }
+        
         $job->delete();
         
         return redirect()->route('dashboard')
             ->with('success', 'Job deleted successfully!');
+    }
+
+    /**
+     * Close a job
+     */
+    public function close($id)
+    {
+        $job = Job::where('employer_id', auth()->id())->findOrFail($id);
+        $job->update(['status' => 'closed']);
+        
+        return redirect()->back()
+            ->with('success', 'Job closed successfully!');
+    }
+
+    /**
+     * Reopen a job
+     */
+    public function reopen($id)
+    {
+        $job = Job::where('employer_id', auth()->id())->findOrFail($id);
+        $job->update(['status' => 'active']);
+        
+        return redirect()->back()
+            ->with('success', 'Job reopened successfully!');
+    }
+
+    /**
+     * Display user's job postings
+     */
+    public function myJobs()
+    {
+        $user = auth()->user();
+        
+        $jobs = $user->jobs()
+            ->withCount(['applications'])
+            ->with(['applications' => function($query) {
+                $query->latest()->take(3);
+            }])
+            ->latest()
+            ->paginate(10);
+
+        return view('jobs.mine', compact('jobs'));
+    }
+
+    public function editApplication(Request $request, $id)
+    {
+        if (!auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Please sign in to edit applications'], 401);
+        }
+
+        $application = \App\Models\JobApplication::findOrFail($id);
+
+        // Check if user owns this application
+        if ($application->applicant_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'You can only edit your own applications'], 403);
+        }
+
+        // Check if application is still pending
+        if ($application->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'You can only edit pending applications'], 403);
+        }
+
+        // Check if job deadline has passed
+        $job = $application->job;
+        if ($job->deadline && $job->deadline->isPast()) {
+            return response()->json(['success' => false, 'message' => 'The application deadline has passed'], 403);
+        }
+
+        // Validate request
+        $request->validate([
+            'cover_letter' => 'required|string|min:50|max:1000'
+        ]);
+
+        // Update application
+        $application->update([
+            'cover_letter' => $request->cover_letter,
+        ]);
+
+        if ($request->expectsJson()) {
+    return response()->json([
+        'success' => true,
+        'message' => 'Application updated successfully!'
+    ]);
+}
+
+    return redirect()
+        ->route('applications.mine')
+        ->with('success', 'Application updated successfully!');
+    }
+
+    public function withdrawApplication(Request $request, $id)
+    {
+        if (!auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Please sign in to withdraw applications'], 401);
+        }
+
+        $application = \App\Models\JobApplication::findOrFail($id);
+
+        // Check if user owns this application
+        if ($application->applicant_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'You can only withdraw your own applications'], 403);
+        }
+
+        // Check if application is still pending
+        if ($application->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'You can only withdraw pending applications'], 403);
+        }
+
+        // Check if job deadline has passed
+        $job = $application->job;
+        if ($job->deadline && $job->deadline->isPast()) {
+            return response()->json(['success' => false, 'message' => 'The application deadline has passed'], 403);
+        }
+
+        // Delete the application
+        $application->delete();
+
+        // Decrement applications count
+        $job->decrement('applications_count');
+
+        if ($request->expectsJson()) {
+    return response()->json([
+        'success' => true,
+        'message' => 'Application withdrawn successfully!'
+    ]);
+}
+
+    return redirect()
+        ->route('applications.mine')
+        ->with('success', 'Application withdrawn successfully!');
     }
 }

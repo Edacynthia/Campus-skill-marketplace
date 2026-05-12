@@ -31,6 +31,11 @@ return new class extends Migration
             $table->string('passport_photo')->nullable();
             $table->boolean('is_approved')->default(false);
 
+            // OTP Verification
+            $table->boolean('otp_verified')->default(false);
+            $table->string('otp_code')->nullable();
+            $table->timestamp('otp_expires_at')->nullable();
+
             $table->rememberToken();
             $table->timestamps();
             

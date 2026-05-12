@@ -1,9 +1,3 @@
-@dump(session()->all())
-
-<hr>
-
-<strong>Flash contents:</strong>
-@dump(session()->get('_flash'))
 @extends('layouts.guest')
 
 @section('content')
@@ -23,22 +17,53 @@
     </div>
 
     <!-- ==================== FLASH MESSAGES ==================== -->
-<div class="max-w-7xl mx-auto px-6 pt-6">
-    @if (session('success'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-2xl flex items-center gap-3 mb-8 shadow-sm">
-            <i class="fa-solid fa-circle-check text-emerald-600 text-xl"></i>
-            <p class="font-medium">{{ session('success') }}</p>
-        </div>
-    @endif
+    <div class="max-w-7xl mx-auto px-6 pt-6" id="flash-container">
+        @if (session('success'))
+            <div id="flash-success" class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-2xl flex items-center justify-between gap-3 mb-8 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-circle-check text-emerald-600 text-xl flex-shrink-0"></i>
+                    <p class="font-medium">{{ session('success') }}</p>
+                </div>
+                <button onclick="dismissFlash('flash-success')"
+                        class="text-emerald-400 hover:text-emerald-700 transition-colors p-1 rounded-full hover:bg-emerald-100 flex-shrink-0"
+                        aria-label="Dismiss">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+        @endif
 
-    @if (session('error'))
-        <div class="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-2xl flex items-center gap-3 mb-8 shadow-sm">
-            <i class="fa-solid fa-circle-exclamation text-red-600 text-xl"></i>
-            <p class="font-medium">{{ session('error') }}</p>
-        </div>
-    @endif
-</div>
+        @if (session('error'))
+            <div id="flash-error" class="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-2xl flex items-center justify-between gap-3 mb-8 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-circle-exclamation text-red-600 text-xl flex-shrink-0"></i>
+                    <p class="font-medium">{{ session('error') }}</p>
+                </div>
+                <button onclick="dismissFlash('flash-error')"
+                        class="text-red-400 hover:text-red-700 transition-colors p-1 rounded-full hover:bg-red-100 flex-shrink-0"
+                        aria-label="Dismiss">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+        @endif
 
+        @if($errors->any())
+            <div id="flash-validation" class="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-2xl flex items-start justify-between gap-3 mb-8 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-triangle-exclamation text-red-600 text-xl flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        @foreach($errors->all() as $error)
+                            <p class="font-medium">{{ $error }}</p>
+                        @endforeach
+                    </div>
+                </div>
+                <button onclick="dismissFlash('flash-validation')"
+                        class="text-red-400 hover:text-red-700 transition-colors p-1 rounded-full hover:bg-red-100 flex-shrink-0"
+                        aria-label="Dismiss">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+        @endif
+    </div>
 
     <!-- Job Details -->
     <div class="max-w-7xl mx-auto px-6 py-12">
@@ -347,8 +372,35 @@
     <!-- Footer -->
     <x-footer />
 
-    @if(auth()->check() && !$userApplication && (!$job->deadline || !$job->deadline->isPast()) && $job->employer_id !== auth()->id())
-        <script>
+    <script>
+        // ====================== FLASH DISMISS ======================
+        function dismissFlash(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.transition = 'opacity 0.4s ease, transform 0.4s ease, max-height 0.5s ease, margin 0.5s ease, padding 0.5s ease';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-8px)';
+            el.style.overflow = 'hidden';
+            el.style.maxHeight = el.scrollHeight + 'px';
+            setTimeout(() => {
+                el.style.maxHeight = '0';
+                el.style.marginBottom = '0';
+                el.style.paddingTop = '0';
+                el.style.paddingBottom = '0';
+            }, 350);
+            setTimeout(() => el.remove(), 850);
+        }
+
+        // Auto-dismiss success and error after 20 seconds
+        @if(session('success'))
+            setTimeout(() => dismissFlash('flash-success'), 20000);
+        @endif
+        @if(session('error'))
+            setTimeout(() => dismissFlash('flash-error'), 20000);
+        @endif
+
+        // ====================== MODAL ======================
+        @if(auth()->check() && !$userApplication && (!$job->deadline || !$job->deadline->isPast()) && $job->employer_id !== auth()->id())
             function showApplicationForm() {
                 document.getElementById('applicationModal').classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
@@ -359,12 +411,9 @@
                 document.body.style.overflow = 'auto';
             }
             
-            // Close modal when clicking outside
             document.getElementById('applicationModal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    hideApplicationForm();
-                }
+                if (e.target === this) hideApplicationForm();
             });
-        </script>
-    @endif
+        @endif
+    </script>
 @endsection

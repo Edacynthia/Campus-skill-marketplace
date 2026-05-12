@@ -97,10 +97,17 @@
                         @enderror
                     </div>
 
-                    <div class="mt-6">
+                    <div class="mt-6 relative">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                        <input type="password" name="password" id="password" required
-                               class="w-full px-4 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a]">
+                        <div class="relative">
+                            <input type="password" name="password" id="password" required
+                                   class="w-full px-4 py-4 pr-12 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a]">
+                            <button type="button" 
+                                    onclick="togglePasswordVisibility('password')" 
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors">
+                                <i id="password-toggle-icon" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
                         @error('password')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
@@ -118,10 +125,17 @@
                         </div>
                     </div>
 
-                    <div class="mt-6">
+                    <div class="mt-6 relative">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                        <input type="password" name="password_confirmation" required
-                               class="w-full px-4 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a]">
+                        <div class="relative">
+                            <input type="password" name="password_confirmation" id="password_confirmation" required
+                                   class="w-full px-4 py-4 pr-12 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a]">
+                            <button type="button" 
+                                    onclick="togglePasswordVisibility('password_confirmation')" 
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors">
+                                <i id="password_confirmation-toggle-icon" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
                         @error('password_confirmation')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
@@ -195,5 +209,23 @@
             document.getElementById('req-number').style.color = /[0-9]/.test(value) ? '#10b981' : '#6b7280';
             document.getElementById('req-symbol').style.color = /[^A-Za-z0-9]/.test(value) ? '#10b981' : '#6b7280';
         });
+    </script>
+
+    <script>
+        function togglePasswordVisibility(fieldId) {
+            const field = document.getElementById(fieldId);
+            const icon = document.getElementById(fieldId + '-toggle-icon');
+            
+            if (field.type === 'password') {
+                field.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                field.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
     </script>
 @endsection

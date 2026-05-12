@@ -54,31 +54,51 @@ class ProfileController extends Controller
             ->with('success', 'Profile updated successfully!');
     }
     
-    public function show($id)
+   public function show($id)
     {
         $user = \App\Models\User::with(['skills', 'jobsPosted'])->findOrFail($id);
         
         // Get user's active skills with reviews
-        $skills = $user->skills()->where('status', 'active')->withCount(['reviews', 'orders'])->latest()->get();
+        $skills = $user->skills()->where('status', 'active')->withCount(['reviews', 'bookings'])->latest()->get();
         
         // Get user's posted jobs
-        $jobs = $user->jobsPosted()->where('status', 'active')->latest()->get();
+        $jobs = $user->jobsPosted()->latest()->get();
         
-        // Calculate user's overall rating
-        $totalReviews = $user->skills()->withCount('reviews')->get()->sum('reviews_count');
-        $avgRating = 0;
-        if ($totalReviews > 0) {
-            $totalRating = $user->skills()->with('reviews')->get()->flatMap->reviews->sum('rating');
-            $avgRating = $totalRating / $totalReviews;
-        }
-        
-        // Get recent reviews for the user's skills
+        // ── Skill reviews (existing system) ──────────────────────────
+        $skillReviewCount = $user->skills()->withCount('reviews')->get()->sum('reviews_count');
+        $skillRatingTotal = $user->skills()->with('reviews')->get()->flatMap->reviews->sum('rating');
+
+        // ── Job ratings (from job applications) ───────────────────────
+        $jobApplicationRatings = \App\Models\Rating::where('reviewee_id', $id)
+            ->whereNotNull('application_id')
+            ->get();
+        $jobApplicationRatingCount = $jobApplicationRatings->count();
+        $jobApplicationRatingTotal = $jobApplicationRatings->sum('rating');
+
+        // ── Booking ratings (from skill bookings) ────────────────────
+        $bookingRatings = \App\Models\Rating::where('reviewee_id', $id)
+            ->whereNotNull('booking_id')
+            ->get();
+        $bookingRatingCount = $bookingRatings->count();
+        $bookingRatingTotal = $bookingRatings->sum('rating');
+
+        // ── Combined overall average ──────────────────────────────────
+        $totalReviews = $skillReviewCount + $jobApplicationRatingCount + $bookingRatingCount;
+        $avgRating = $totalReviews > 0
+            ? ($skillRatingTotal + $jobApplicationRatingTotal + $bookingRatingTotal) / $totalReviews
+            : 0;
+
+        // ── Recent skill reviews ──────────────────────────────────────
         $reviews = \App\Models\Review::whereIn('skill_id', $skills->pluck('id'))
             ->with(['skill', 'reviewer'])
             ->latest()
             ->take(10)
             ->get();
         
-        return view('profile.show', compact('user', 'skills', 'jobs', 'avgRating', 'totalReviews', 'reviews'));
+        return view('profile.show', compact(
+            'user', 'skills', 'jobs',
+            'avgRating', 'totalReviews', 'reviews',
+            'jobApplicationRatings', 'bookingRatings'
+        ));
     }
 }

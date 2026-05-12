@@ -3,12 +3,28 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\OTPController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobProgressController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\MessageController; 
 use App\Http\Controllers\NotificationController; 
+use App\Http\Controllers\ApplicationController;
+
+
+use Illuminate\Support\Facades\Mail;
+
+Route::get('/test-mail', function () {
+    Mail::raw('Laravel email test is working.', function ($message) {
+        $message->to('cynthiaeda70@gmail.com')
+                ->subject('Test Email from Laravel');
+    });
+
+    return 'Test email sent';
+});
 
 // ====================== PUBLIC ROUTES ======================
 Route::get('/', function () {
@@ -31,6 +47,12 @@ Route::post('/register', [RegisterController::class, 'register']);
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
+// ====================== OTP ROUTES ======================
+Route::get('/otp/request', [OTPController::class, 'showRequestForm'])->name('otp.request.form');
+Route::post('/otp/send', [OTPController::class, 'sendOTP'])->name('otp.send');
+Route::get('/otp/verify', [OTPController::class, 'showVerificationForm'])->name('otp.verification.form');
+Route::post('/otp/verify', [OTPController::class, 'verifyOTP'])->name('otp.verify');
+
 // ====================== PROTECTED ROUTES ======================
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -39,6 +61,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
+    // User Management Routes
+    Route::get('/my-applications', [ApplicationController::class, 'myApplications'])->name('applications.mine');
+    Route::get('/received-applications', [ApplicationController::class, 'receivedApplications'])->name('applications.received');
+    Route::get('/applications/{id}', [ApplicationController::class, 'show'])->name('applications.show');
+    Route::get('/bookings', [BookingController::class, 'myBookings'])->name('bookings.index');
+    Route::get('/my-service-requests', [BookingController::class, 'myServiceRequests'])->name('bookings.requests');
+    Route::get('/my-skill-bookings', [BookingController::class, 'mySkillBookings'])->name('bookings.skills');
+    Route::get('/my-skills', [SkillController::class, 'mySkills'])->name('skills.mine');
+    Route::get('/my-jobs', [JobController::class, 'myJobs'])->name('jobs.mine');
+
     // Job Routes — create must be before {id}
     Route::get('/jobs/create', [JobController::class, 'create'])->name('jobs.create');
     Route::post('/jobs', [JobController::class, 'store'])->name('jobs.store');
@@ -46,6 +78,21 @@ Route::middleware('auth')->group(function () {
     Route::put('/jobs/{id}', [JobController::class, 'update'])->name('jobs.update');
     Route::delete('/jobs/{id}', [JobController::class, 'destroy'])->name('jobs.destroy');
     Route::post('/jobs/{id}/apply', [JobController::class, 'apply'])->name('jobs.apply');
+    Route::patch('/jobs/{id}/close', [JobController::class, 'close'])->name('jobs.close');
+    Route::patch('/jobs/{id}/reopen', [JobController::class, 'reopen'])->name('jobs.reopen');
+    
+    // Application editing routes
+    Route::patch('/applications/{id}', [JobController::class, 'editApplication'])->name('applications.edit');
+    Route::delete('/applications/{id}', [JobController::class, 'withdrawApplication'])->name('applications.withdraw');
+
+    // Application progress routes
+    Route::post('/applications/{id}/accept', [JobProgressController::class, 'accept'])->name('applications.accept');
+    Route::post('/applications/{id}/reject', [JobProgressController::class, 'reject'])->name('applications.reject'); 
+    Route::post('/applications/{id}/start', [JobProgressController::class, 'startWork'])->name('applications.start');
+    Route::post('/applications/{id}/complete', [JobProgressController::class, 'markComplete'])->name('applications.complete');
+    Route::post('/applications/{id}/revision', [JobProgressController::class, 'requestRevision'])->name('applications.revision');
+    Route::post('/applications/{id}/confirm', [JobProgressController::class, 'confirmComplete'])->name('applications.confirm');
+    Route::post('/applications/{id}/rate', [JobProgressController::class, 'submitRating'])->name('applications.rate');
 
     // Skill Routes — create must be before {id}
     Route::get('/skills/create', [SkillController::class, 'create'])->name('skills.create');
@@ -53,6 +100,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/skills/{id}/edit', [SkillController::class, 'edit'])->name('skills.edit');
     Route::put('/skills/{id}', [SkillController::class, 'update'])->name('skills.update');
     Route::delete('/skills/{id}', [SkillController::class, 'destroy'])->name('skills.destroy');
+    Route::post('/skills/{id}/apply', [SkillController::class, 'apply'])->name('skills.apply');
+    Route::patch('/skills/{id}/activate', [SkillController::class, 'activate'])->name('skills.activate');
+    Route::patch('/skills/{id}/deactivate', [SkillController::class, 'deactivate'])->name('skills.deactivate');
+
+    // Booking Routes
+    Route::post('/skills/{skillId}/book', [BookingController::class, 'store'])->name('bookings.store');
+    Route::post('/bookings/{id}/confirm', [BookingController::class, 'confirm'])->name('bookings.confirm');
+    Route::post('/bookings/{id}/client-confirm', [BookingController::class, 'clientConfirm'])->name('bookings.clientConfirm');
+    Route::post('/bookings/{id}/provider-confirm', [BookingController::class, 'providerConfirm'])->name('bookings.providerConfirm');
+    Route::post('/bookings/{id}/decline', [BookingController::class, 'decline'])->name('bookings.decline');
+    Route::post('/bookings/{id}/rate', [BookingController::class, 'submitRating'])->name('bookings.rate');
+
+    // Job Route::middleware(['auth'])->group(function () {
 });
 
 // ====================== MESSAGING ROUTES ======================

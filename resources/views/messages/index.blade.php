@@ -10,12 +10,12 @@
             </div>
 
             <!-- Success Messages -->
-            @if(session('success'))
+            {{-- @if(session('success'))
                 <div class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-3">
                     <i class="fa-solid fa-check-circle"></i>
                     <span>{{ session('success') }}</span>
                 </div>
-            @endif
+            @endif --}}
 
             @if($messages->count() > 0)
                 <div class="mb-4 p-3 bg-blue-50 rounded-lg">

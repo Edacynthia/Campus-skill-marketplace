@@ -161,4 +161,46 @@ class SkillController extends Controller
         return redirect()->route('dashboard')
             ->with('success', 'Skill deleted successfully!');
     }
+
+    /**
+     * Activate a skill
+     */
+    public function activate($id)
+    {
+        $skill = Skill::where('user_id', auth()->id())->findOrFail($id);
+        $skill->update(['status' => 'active']);
+        
+        return redirect()->back()
+            ->with('success', 'Skill activated successfully!');
+    }
+
+    /**
+     * Deactivate a skill
+     */
+    public function deactivate($id)
+    {
+        $skill = Skill::where('user_id', auth()->id())->findOrFail($id);
+        $skill->update(['status' => 'inactive']);
+        
+        return redirect()->back()
+            ->with('success', 'Skill deactivated successfully!');
+    }
+
+    /**
+     * Display user's skills
+     */
+    public function mySkills()
+    {
+        $user = auth()->user();
+        
+        $skills = $user->skills()
+            ->withCount(['reviews', 'bookings', 'ratings'])
+            ->with(['bookings' => function($query) {
+                $query->latest()->take(3);
+            }])
+            ->latest()
+            ->paginate(10);
+
+        return view('skills.mine', compact('skills'));
+    }
 }

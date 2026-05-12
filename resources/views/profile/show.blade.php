@@ -21,8 +21,20 @@
                     
                     <!-- Profile Info -->
                     <div class="flex-1">
-                        <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ $user->fullName() }}</h1>
+                        <div class="flex justify-between items-start mb-2">
+                            <h1 class="text-3xl font-bold text-gray-800">{{ $user->fullName() }}</h1>
+                            @if(auth()->check() && auth()->id() === $user->id)
+                                <a href="{{ route('profile.edit') }}" 
+                                   class="px-4 py-2 bg-[#1e3a8a] text-white text-sm font-medium rounded-lg hover:bg-[#0f2b5e] transition-colors">
+                                    <i class="fa-solid fa-edit mr-2"></i>Edit Profile
+                                </a>
+                            @endif
+                        </div>
                         <p class="text-gray-600 mb-4">{{ $user->email }}</p>
+                        
+                        @if($user->bio)
+                            <p class="text-gray-700 mb-4 leading-relaxed">{{ $user->bio }}</p>
+                        @endif
                         
                         @if($user->department)
                             <div class="flex flex-wrap gap-2 mb-4">
@@ -71,8 +83,8 @@
                                 <p class="text-sm text-gray-500">Applications</p>
                             </div>
                             <div class="text-center">
-                                <p class="text-2xl font-bold text-[#1e3a8a]">{{ $user->sales()->sum('total_amount') > 0 ? '₦' . number_format($user->sales()->sum('total_amount'), 0) : '₦0' }}</p>
-                                <p class="text-sm text-gray-500">Earnings</p>
+                                <p class="text-2xl font-bold text-[#1e3a8a]">{{ $user->myServiceBookings()->where('status', 'done')->count() }}</p>
+                                <p class="text-sm text-gray-500">Services Completed</p>
                             </div>
                         </div>
                     </div>
@@ -205,6 +217,183 @@
                     </div>
                 </div>
             @endif
+
+            <!-- Ratings Sections -->
+            <div class="mt-8 space-y-8">
+                <!-- Reviews as a Worker/Provider -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-star text-[#1e3a8a]"></i>
+                        Reviews as a Worker/Provider
+                    </h2>
+                    @php
+                        // Combine employer_to_worker ratings from jobs AND client_to_provider ratings from bookings
+                        $workerRatings = $jobApplicationRatings->where('type', 'employer_to_worker')
+                            ->merge($bookingRatings->where('type', 'client_to_provider'))
+                            ->sortByDesc('created_at');
+                        
+                        $workerAvgRating = $workerRatings->count() > 0 
+                            ? $workerRatings->sum('rating') / $workerRatings->count() 
+                            : 0;
+                        $workerTotalReviews = $workerRatings->count();
+                    @endphp
+                    @if($workerRatings->count() > 0)
+                        <div class="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex gap-1">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            @if($i <= floor($workerAvgRating))
+                                                <i class="fa-solid fa-star text-yellow-400"></i>
+                                            @else
+                                                <i class="fa-regular fa-star text-gray-300"></i>
+                                            @endif
+                                        @endfor
+                                    </div>
+                                    <span class="text-lg font-semibold text-gray-800">{{ number_format($workerAvgRating, 1) }}</span>
+                                </div>
+                                <span class="text-sm text-gray-600">{{ $workerTotalReviews }} review{{ $workerTotalReviews > 1 ? 's' : '' }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            @foreach($workerRatings as $rating)
+                                <div class="border-l-4 border-blue-200 pl-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex items-center gap-3">
+                                            @if($rating->reviewer->passport_photo)
+                                                <img src="{{ asset('storage/' . $rating->reviewer->passport_photo) }}" 
+                                                     alt="{{ $rating->reviewer->fullName() }}" 
+                                                     class="w-10 h-10 rounded-full object-cover border-2 border-gray-200">
+                                            @else
+                                                <div class="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center text-sm font-bold text-[#1e3a8a]">
+                                                    {{ strtoupper(substr($rating->reviewer->first_name, 0, 1)) }}{{ strtoupper(substr($rating->reviewer->last_name, 0, 1)) }}
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <p class="font-semibold text-gray-800">{{ $rating->reviewer->fullName() }}</p>
+                                                <p class="text-xs text-gray-500">{{ $rating->created_at->format('M j, Y') }}</p>
+                                                <p class="text-xs text-gray-400">
+                                                    @if($rating->type === 'employer_to_worker')
+                                                        <i class="fa-solid fa-briefcase text-xs"></i> Job Work
+                                                    @else
+                                                        <i class="fa-solid fa-handshake text-xs"></i> Service Provided
+                                                    @endif
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-1">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                @if($i <= $rating->rating)
+                                                    <i class="fa-solid fa-star text-yellow-400 text-sm"></i>
+                                                @else
+                                                    <i class="fa-regular fa-star text-gray-300 text-sm"></i>
+                                                @endif
+                                            @endfor
+                                        </div>
+                                    </div>
+                                    @if($rating->review)
+                                        <p class="text-gray-700 mt-2 leading-relaxed">{{ $rating->review }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-8">
+                            <div class="text-5xl mb-4 opacity-70">⭐</div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">No Worker/Provider Reviews Yet</h3>
+                            <p class="text-gray-600">This user hasn't received any reviews for their work or services yet.</p>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- Reviews as a Client/Employer -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-briefcase text-[#1e3a8a]"></i>
+                        Reviews as a Client/Employer
+                    </h2>
+                    @php
+                        // Combine worker_to_employer ratings from jobs AND provider_to_client ratings from bookings
+                        $employerRatings = $jobApplicationRatings->where('type', 'worker_to_employer')
+                            ->merge($bookingRatings->where('type', 'provider_to_client'))
+                            ->sortByDesc('created_at');
+                        
+                        $employerAvgRating = $employerRatings->count() > 0 
+                            ? $employerRatings->sum('rating') / $employerRatings->count() 
+                            : 0;
+                        $employerTotalReviews = $employerRatings->count();
+                    @endphp
+                    @if($employerRatings->count() > 0)
+                        <div class="mb-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex gap-1">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            @if($i <= floor($employerAvgRating))
+                                                <i class="fa-solid fa-star text-yellow-400"></i>
+                                            @else
+                                                <i class="fa-regular fa-star text-gray-300"></i>
+                                            @endif
+                                        @endfor
+                                    </div>
+                                    <span class="text-lg font-semibold text-gray-800">{{ number_format($employerAvgRating, 1) }}</span>
+                                </div>
+                                <span class="text-sm text-gray-600">{{ $employerTotalReviews }} review{{ $employerTotalReviews > 1 ? 's' : '' }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            @foreach($employerRatings as $rating)
+                                <div class="border-l-4 border-emerald-200 pl-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex items-center gap-3">
+                                            @if($rating->reviewer->passport_photo)
+                                                <img src="{{ asset('storage/' . $rating->reviewer->passport_photo) }}" 
+                                                     alt="{{ $rating->reviewer->fullName() }}" 
+                                                     class="w-10 h-10 rounded-full object-cover border-2 border-gray-200">
+                                            @else
+                                                <div class="w-10 h-10 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-full flex items-center justify-center text-sm font-bold text-emerald-700">
+                                                    {{ strtoupper(substr($rating->reviewer->first_name, 0, 1)) }}{{ strtoupper(substr($rating->reviewer->last_name, 0, 1)) }}
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <p class="font-semibold text-gray-800">{{ $rating->reviewer->fullName() }}</p>
+                                                <p class="text-xs text-gray-500">{{ $rating->created_at->format('M j, Y') }}</p>
+                                                <p class="text-xs text-gray-400">
+                                                    @if($rating->type === 'worker_to_employer')
+                                                        <i class="fa-solid fa-briefcase text-xs"></i> Job Posted
+                                                    @else
+                                                        <i class="fa-solid fa-handshake text-xs"></i> Service Received
+                                                    @endif
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-1">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                @if($i <= $rating->rating)
+                                                    <i class="fa-solid fa-star text-yellow-400 text-sm"></i>
+                                                @else
+                                                    <i class="fa-regular fa-star text-gray-300 text-sm"></i>
+                                                @endif
+                                            @endfor
+                                        </div>
+                                    </div>
+                                    @if($rating->review)
+                                        <p class="text-gray-700 mt-2 leading-relaxed">{{ $rating->review }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-8">
+                            <div class="text-5xl mb-4 opacity-70">💼</div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">No Client/Employer Reviews Yet</h3>
+                            <p class="text-gray-600">This user hasn't received any reviews as a client or employer yet.</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
 
             <!-- Back to Dashboard -->
             <div class="mt-8 text-center">

@@ -6,7 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Skill;
 use App\Models\Job;
 use App\Models\JobApplication;
-use App\Models\Order;
+use App\Models\Booking;
+use App\Models\Message;
 
 class DashboardController extends Controller
 {
@@ -16,7 +17,7 @@ class DashboardController extends Controller
         
         // Get user's skills
         $userSkills = Skill::where('user_id', $user->id)
-            ->withCount(['reviews', 'orders'])
+            ->withCount(['reviews', 'bookings'])
             ->latest()
             ->take(5)
             ->get();
@@ -35,35 +36,39 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
         
-        // Get user's job applications (when they applied to jobs)
-        $myApplications = JobApplication::where('applicant_id', $user->id)
-            ->with(['job'])
+        // Get user's job applications (when they applied to jobs) - Recent 3
+        $recentApplications = auth()->user()->jobapplications()
+            ->with(['job.employer'])
             ->latest()
-            ->take(5)
+            ->take(3)
             ->get();
         
-        // Get user's orders (when they purchased skills)
-        $myOrders = Order::where('client_id', $user->id)
-            ->with(['skill', 'vendor'])
+        // Get user's bookings - Recent 3
+        $recentBookings = auth()->user()->myBookings()
+            ->with(['skill.provider', 'client'])
             ->latest()
-            ->take(5)
+            ->take(3)
+            ->get();
+        
+        // Get user's received messages - Recent 3
+        $recentMessages = auth()->user()->receivedMessages()
+            ->with(['sender'])
+            ->latest()
+            ->take(3)
             ->get();
         
         // Calculate stats
         $stats = [
             'active_skills' => Skill::where('user_id', $user->id)->where('status', 'active')->count(),
-            'job_applications' => $myApplications->count(),
+            'job_applications' => JobApplication::where('applicant_id', $user->id)->count(),
             'posted_jobs' => Job::where('employer_id', $user->id)->where('status', 'active')->count(),
-            'received_applications' => $jobApplications->count(),
-            'total_earnings' => Order::where('vendor_id', $user->id)->sum('total_amount'),
+            'received_applications' => JobApplication::whereIn('job_id', $userJobs->pluck('id'))->count(),
         ];
         
         return view('dashboard', compact(
-            'userSkills',
-            'userJobs', 
-            'jobApplications',
-            'myApplications',
-            'myOrders',
+            'recentApplications',
+            'recentBookings',
+            'recentMessages',
             'stats'
         ));
     }

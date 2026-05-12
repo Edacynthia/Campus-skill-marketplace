@@ -9,6 +9,8 @@ class Job extends Model
 {
     use HasFactory;
 
+    protected $table = 'campus_jobs';
+
     protected $fillable = [
         'employer_id',
         'title',
@@ -112,5 +114,15 @@ class Job extends Model
     public function scopeWithDeadline($query)
     {
         return $query->where('deadline', '>=', now());
+    }
+
+    public function scopeInProgress($query)
+    {
+        return $query->where('status', 'in_progress');
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'completed');
     }
 }

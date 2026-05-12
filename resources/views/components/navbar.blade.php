@@ -131,7 +131,7 @@
                         </button>
 
                         <div id="profile-dropdown" class="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                            <a href="{{ route('profile.show', auth()->id()) }}" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
                                 <i class="fa-solid fa-user"></i>
                                 <span>My Profile</span>
                             </a>
@@ -273,7 +273,7 @@
                         <div class="border-t pt-4">
                             <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Account</h3>
                             
-                            <a href="{{ route('profile.edit') }}" 
+                            <a href="{{ route('profile.show', auth()->id()) }}" 
                                class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
                                onclick="toggleMobileMenu()">
                                 <i class="fa-solid fa-user text-lg"></i>

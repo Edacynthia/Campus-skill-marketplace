@@ -21,4 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
+        // Schedule the job expiry command to run daily at midnight
+        $schedule->command('app:expire-jobs')->dailyAt('00:00');
+    })
+    ->create();

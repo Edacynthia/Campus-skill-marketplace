@@ -20,7 +20,7 @@ class Skill extends Model
         'status',
         'rating',
         'views_count',
-        'orders_count'
+        'bookings_count'
     ];
 
     protected $casts = [
@@ -35,14 +35,31 @@ class Skill extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function provider()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function reviews()
     {
         return $this->hasMany(Review::class);
     }
 
-    public function orders()
+    public function ratings()
     {
-        return $this->hasMany(Order::class);
+        return $this->hasManyThrough(
+            \App\Models\Rating::class,
+            \App\Models\Booking::class,
+            'skill_id',
+            'booking_id',
+            'id',
+            'id'
+        );
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
     }
 
     public function getFormattedPriceAttribute()
