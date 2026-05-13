@@ -5,51 +5,57 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Skill;
 use App\Models\User;
+use App\Models\Notification;
 
 class SkillController extends Controller
 {
-    public function index(Request $request)
+   public function index(Request $request)
     {
-        // Debug: Log all request parameters
-        \Log::info('SkillController index called with params: ' . json_encode($request->all()));
-        
-        $query = Skill::with('user')->where('status', 'active');
-        
+        $query = Skill::with('user')
+            ->where('status', 'active');
+
         // Search functionality
-        if ($request->has('search') && !empty($request->search)) {
-            $searchTerm = $request->search;
-            // Split search term into individual words for better matching
+        if ($request->filled('search')) {
+            $searchTerm = trim($request->search);
             $searchWords = explode(' ', $searchTerm);
-            
-            $query->where(function($q) use ($searchWords) {
+
+            $query->where(function ($q) use ($searchWords) {
                 foreach ($searchWords as $word) {
-                    if (!empty(trim($word))) {
-                        $q->orWhere('title', 'LIKE', '%' . trim($word) . '%')
-                          ->orWhere('description', 'LIKE', '%' . trim($word) . '%')
-                          ->orWhere('category', 'LIKE', '%' . trim($word) . '%');
+                    $word = trim($word);
+
+                    if ($word !== '') {
+                        $q->orWhere('title', 'LIKE', "%{$word}%")
+                        ->orWhere('description', 'LIKE', "%{$word}%")
+                        ->orWhere('category', 'LIKE', "%{$word}%");
                     }
                 }
             });
         }
-        
-        // Filter by category
-        if ($request->has('category') && !empty($request->category)) {
-            $query->where('category', $request->category);
+
+        // Category filter
+        if ($request->filled('category')) {
+            $category = trim($request->category);
+
+            $query->where(function ($q) use ($category) {
+                $q->where('category', 'LIKE', "%{$category}%")
+                ->orWhere('title', 'LIKE', "%{$category}%")
+                ->orWhere('description', 'LIKE', "%{$category}%");
+            });
         }
-        
+
         // Filter by price range
-        if ($request->has('min_price') && $request->min_price) {
+        if ($request->filled('min_price')) {
             $query->where('price', '>=', $request->min_price);
         }
-        
-        if ($request->has('max_price') && $request->max_price) {
+
+        if ($request->filled('max_price')) {
             $query->where('price', '<=', $request->max_price);
         }
-        
+
         // Sort functionality
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         if ($sortBy === 'price_low') {
             $query->orderBy('price', 'asc');
         } elseif ($sortBy === 'price_high') {
@@ -59,16 +65,15 @@ class SkillController extends Controller
         } else {
             $query->orderBy($sortBy, $sortOrder);
         }
-        
-        $skills = $query->paginate(12);
-        
-        // Get categories for filter
+
+        $skills = $query->paginate(12)->withQueryString();
+
         $categories = Skill::where('status', 'active')
             ->distinct()
             ->pluck('category')
             ->filter()
             ->sort();
-        
+
         return view('skills.index', compact('skills', 'categories'));
     }
     
@@ -112,12 +117,24 @@ class SkillController extends Controller
         $skill = Skill::create([
             'user_id' => auth()->id(),
             'title' => $request->title,
-            'description' => $request->description,
+            'description' => strip_tags($request->description),
             'category' => $request->category,
             'price' => $request->price,
             'price_type' => $request->price_type,
             'status' => 'active',
         ]);
+
+        $users = User::where('id', '!=', auth()->id())->get();
+
+        foreach ($users as $user) {
+            Notification::createNotification(
+                $user->id,
+                'new_skill',
+                'New Skill Posted',
+                auth()->user()->first_name . ' posted a new skill: ' . $skill->title,
+                '/skills/' . $skill->id
+            );
+        }
         
         return redirect()->route('dashboard')
             ->with('success', 'Skill posted successfully!');

@@ -36,7 +36,23 @@ Route::get('/', function () {
 
 Route::get('/skills', [SkillController::class, 'index'])->name('skills.index');
 Route::get('/jobs', [JobController::class, 'index'])->name('jobs.index');
-Route::get('/search', fn() => 'Search results coming...')->name('search');
+// Route::get('/search', fn() => 'Search results coming...')->name('search');
+use Illuminate\Http\Request;
+
+Route::get('/search', function (Request $request) {
+    $type = $request->get('type', 'skills');
+    $query = $request->get('q');
+
+    if ($type === 'jobs') {
+        return redirect()->route('jobs.index', [
+            'search' => $query,
+        ]);
+    }
+
+    return redirect()->route('skills.index', [
+        'search' => $query,
+    ]);
+})->name('search');
 
 // ====================== AUTHENTICATION ROUTES ======================
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -132,6 +148,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
     Route::get('/api/notifications/count', [NotificationController::class, 'getUnreadCount']);
     Route::get('/api/notifications/recent', [NotificationController::class, 'getRecentNotifications']);
+    Route::get('/notifications/{id}/open', [NotificationController::class, 'open'])->name('notifications.open');
 });
 
 // ====================== WILDCARD ROUTES LAST ======================

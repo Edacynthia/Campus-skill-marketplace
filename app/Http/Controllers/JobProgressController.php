@@ -43,24 +43,24 @@ class JobProgressController extends Controller
     }
 
     public function reject($applicationId)
-{
-    $application = JobApplication::findOrFail($applicationId);
+    {
+        $application = JobApplication::findOrFail($applicationId);
 
-    if ($application->job->employer_id !== auth()->id()) {
-        return response()->json(['success' => false, 'message' => 'Unauthorized action'], 403);
+        if ($application->job->employer_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized action'], 403);
+        }
+
+        if ($application->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'Can only reject pending applications'], 400);
+        }
+
+        $application->update(['status' => 'rejected']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Application rejected.'
+        ]);
     }
-
-    if ($application->status !== 'pending') {
-        return response()->json(['success' => false, 'message' => 'Can only reject pending applications'], 400);
-    }
-
-    $application->update(['status' => 'rejected']);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Application rejected.'
-    ]);
-}
 
     public function startWork($applicationId)
     {

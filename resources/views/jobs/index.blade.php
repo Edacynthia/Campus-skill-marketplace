@@ -388,11 +388,17 @@
                                             </div>
                                         @endif
                                         <div>
-                                            <p class="font-medium text-sm text-gray-800">
-                                                {{ $job->employer ? $job->employer->first_name . ' ' . substr($job->employer->last_name, 0, 1) : 'University Staff' }}
-                                            </p>
-                                            <p class="text-xs text-gray-400">{{ $job->created_at->diffForHumans() }}</p>
-                                        </div>
+    @if($job->employer)
+        <a href="{{ route('profile.show', $job->employer->id) }}"
+           class="font-medium text-sm text-gray-800 hover:text-[#1e3a8a] hover:underline transition">
+            {{ $job->employer->first_name . ' ' . substr($job->employer->last_name, 0, 1) }}
+        </a>
+    @else
+        <p class="font-medium text-sm text-gray-800">University Staff</p>
+    @endif
+
+    <p class="text-xs text-gray-400">{{ $job->created_at->diffForHumans() }}</p>
+</div>
                                     </div>
                                     <div class="text-right">
                                         <p class="font-bold text-xl text-gray-800">{{ $job->formatted_salary }}</p>

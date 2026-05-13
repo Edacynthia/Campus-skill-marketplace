@@ -55,6 +55,12 @@ class ApplicationController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        if ($application->applicant_id === auth()->id() && $application->status !== 'pending') {
+            return redirect()
+                ->route('applications.mine')
+                ->with('error', 'You can only edit applications that are still pending.');
+        }
+
         return view('applications.show', compact('application'));
     }
 }

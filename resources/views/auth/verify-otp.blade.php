@@ -15,6 +15,14 @@
         </div>
 
         <div class="p-8">
+            <div class="text-center mb-6">
+                <a href="{{ route('home') }}" class="inline-flex items-center justify-center gap-2">
+                    <span class="text-2xl font-bold text-[#1e3a8a]">Campus</span>
+                    <span class="text-2xl font-bold text-emerald-600">Connect</span>
+                </a>
+                <p class="text-xs text-gray-500 mt-1">Secure campus marketplace access</p>
+            </div>
+
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
                 <div class="flex items-start gap-3">
                     <i class="fa-solid fa-envelope text-blue-600 mt-1"></i>
@@ -46,7 +54,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('otp.verify') }}" class="space-y-6">
+            <form method="POST" action="{{ route('otp.verify') }}" class="space-y-6 auth-submit-form">
                 @csrf
 
                 <input type="hidden" name="email" value="{{ $email }}" required>
@@ -84,9 +92,10 @@
 
                 <div class="space-y-3">
                     <button type="submit"
-                            class="w-full py-4 bg-[#1e3a8a] hover:bg-[#0f2b5e] text-white font-semibold rounded-2xl transition-all flex items-center justify-center gap-2">
+                            data-loading-text="Verifying..."
+                            class="auth-submit-btn w-full py-4 bg-[#1e3a8a] hover:bg-[#0f2b5e] text-white font-semibold rounded-2xl transition-all flex items-center justify-center gap-2">
                         <i class="fa-solid fa-check-circle"></i>
-                        Verify & Login
+                        <span>Verify & Login</span>
                     </button>
 
                     <div class="text-center">
@@ -119,4 +128,24 @@ input[type="text"][name="otp"]:focus {
     letter-spacing: 0.3em;
 }
 </style>
+
+<script>
+document.querySelectorAll('.auth-submit-form').forEach(form => {
+    form.addEventListener('submit', function () {
+        const button = form.querySelector('.auth-submit-btn');
+
+        if (!button) return;
+
+        button.disabled = true;
+        button.classList.add('opacity-75', 'cursor-not-allowed');
+
+        const loadingText = button.dataset.loadingText || 'Processing...';
+
+        button.innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span>${loadingText}</span>
+        `;
+    });
+});
+</script>
 @endsection

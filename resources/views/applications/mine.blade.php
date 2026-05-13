@@ -100,9 +100,11 @@
                                     @endif
                                 </div>
                                 
-                                <a href="{{ route('applications.show', $application->id) }}" class="text-sm text-[#1e3a8a] hover:text-[#0f2b5e] font-medium">
-                                    View Details <i class="fa-solid fa-arrow-right ml-1"></i>
-                                </a>
+                               @if($application->status === 'pending')
+    <a href="{{ route('applications.show', $application->id) }}" class="text-sm text-[#1e3a8a] hover:text-[#0f2b5e] font-medium">
+        View Details <i class="fa-solid fa-arrow-right ml-1"></i>
+    </a>
+@endif
                             </div>
                         </div>
                     </div>
@@ -127,4 +129,48 @@
         @endif
     </div>
 </div>
+
+<script>
+function startWork(applicationId) {
+    fetch(`/applications/${applicationId}/start`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Job started successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Error starting job');
+        }
+    })
+    .catch(() => alert('Error starting job'));
+}
+
+function markComplete(applicationId) {
+    fetch(`/applications/${applicationId}/complete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Work submitted successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Error submitting work');
+        }
+    })
+    .catch(() => alert('Error submitting work'));
+}
+</script>
 @endsection

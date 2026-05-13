@@ -48,6 +48,14 @@ class BookingController extends Controller
             'message' => $request->message
         ]);
 
+        Notification::createNotification(
+            $skill->user_id,
+            'booking_request',
+            'New Booking Request',
+            auth()->user()->first_name . ' requested your skill: ' . $skill->title,
+            '/my-skill-bookings'
+        );
+
         // Create message for skill provider
         Message::create([
             'sender_id' => auth()->id(),
@@ -267,6 +275,16 @@ class BookingController extends Controller
 
     public function myServiceRequests()
     {
+        auth()->user()->notifications()
+    ->whereIn('type', [
+        'booking_confirmed',
+        'booking_declined',
+        'booking_completed',
+        'rating_received'
+    ])
+    ->where('is_read', false)
+    ->update(['is_read' => true]);
+
         $myBookings = Booking::with(['skill', 'provider', 'ratings'])
             ->where('client_id', auth()->id())
             ->latest()
@@ -277,6 +295,15 @@ class BookingController extends Controller
 
     public function mySkillBookings()
     {
+        auth()->user()->notifications()
+    ->whereIn('type', [
+        'booking_request',
+        'booking_completed',
+        'rating_received'
+    ])
+    ->where('is_read', false)
+    ->update(['is_read' => true]);
+
         $myServiceBookings = Booking::with(['skill', 'client', 'ratings'])
             ->where('provider_id', auth()->id())
             ->latest()

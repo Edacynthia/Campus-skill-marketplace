@@ -17,7 +17,9 @@
     </div>
 
 
-    
+    <!-- <p class="text-xs text-red-500">
+    Logged in user: {{ auth()->id() }} | Skill owner: {{ $skill->user_id }}
+</p> -->
     <!-- Success Messages -->
     @if(session('success'))
         <div class="max-w-7xl mx-auto px-6 pt-6">

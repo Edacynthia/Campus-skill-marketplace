@@ -175,4 +175,12 @@ class User extends Authenticatable
             ->where('type', 'worker_to_employer')
             ->count();
     }
+
+    public function unreadNotificationsByTypes(array $types)
+{
+    return $this->notifications()
+        ->whereIn('type', $types)
+        ->where('is_read', false)
+        ->count();
+}
 }

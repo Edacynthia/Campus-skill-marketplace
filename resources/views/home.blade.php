@@ -84,7 +84,7 @@
                         </div>
                         <p class="text-sm text-gray-600 leading-snug">Ready to earn? Find jobs posted by the community.</p>
                         <a href="{{ route('jobs.index') }}"
-                           class="inline-flex items-center text-sm font-semibold text-emerald-700 hover:gap-2 transition-all group">
+   class="group px-6 sm:px-8 py-4 bg-emerald-700 text-white font-bold rounded-2xl hover:bg-emerald-600 transition-all transform hover:scale-105 shadow-lg">
                             Browse Jobs 
                             <i class="fa-solid fa-arrow-right ml-1 group-hover:ml-2 transition-all"></i>
                         </a>
@@ -95,11 +95,13 @@
             <!-- Enhanced Right Image with lazy loading -->
             <div class="relative animate-fade-in-up animation-delay-200">
                 <div class="relative rounded-3xl overflow-hidden shadow-2xl">
-                    <img src="{{ asset('storage/images/campus-hero.png') }}"
-                         alt="Students collaborating on Campus Connect platform"
-                         class="w-full object-cover aspect-video lazy-load rounded-3xl shadow-2xl"
-                     style="height: 680px;"
-                         loading="lazy">
+                    <img src="{{ asset('storage/images/campus-hero.webp') }}"
+     alt="Students collaborating on Campus Connect platform"
+     loading="eager"
+     fetchpriority="high"
+     decoding="async"
+     class="w-full object-cover aspect-video rounded-3xl shadow-2xl"
+     style="height: 680px;">
                     <div class="absolute inset-0 bg-gradient-to-tr from-[#1e3a8a]/20 to-transparent"></div>
                 </div>
                 
@@ -182,25 +184,30 @@
                 ];
             @endphp
             
-            @foreach($categories as $category)
-            <div class="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
-                <img src="{{ asset('storage/images/' . $category['image']) }}" 
-                     alt="{{ $category['name'] }} services on Campus Connect"
-                     class="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700 lazy-load"
-                     loading="lazy">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-6">
-                    <h3 class="text-white text-2xl font-bold mb-1">{{ $category['name'] }}</h3>
-                    <p class="text-white/90 text-sm">{{ $category['desc'] }}</p>
-                    <div class="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span class="inline-flex items-center text-white text-sm font-semibold">
-                            Explore 
-                            <i class="fa-solid fa-arrow-right ml-2"></i>
-                        </span>
-                    </div>
-                </div>
+          @foreach($categories as $category)
+   <a href="{{ route('skills.index') }}?category={{ urlencode($category['name']) }}"
+   class="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 block">
+       <img src="{{ asset('storage/images/' . $category['image']) }}" 
+     alt="{{ $category['name'] }} services on Campus Connect"
+     class="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+     loading="lazy"
+     decoding="async">
+
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+
+        <div class="absolute bottom-0 left-0 right-0 p-6">
+            <h3 class="text-white text-2xl font-bold mb-1">{{ $category['name'] }}</h3>
+            <p class="text-white/90 text-sm">{{ $category['desc'] }}</p>
+
+            <div class="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span class="inline-flex items-center text-white text-sm font-semibold">
+                    Explore 
+                    <i class="fa-solid fa-arrow-right ml-2"></i>
+                </span>
             </div>
-            @endforeach
+        </div>
+    </a>
+@endforeach
         </div>
     </div>
     
@@ -322,10 +329,11 @@
                     </div>
                     <p class="text-gray-700 italic mb-6 leading-relaxed">"{{ $testimonial['text'] }}"</p>
                     <div class="flex items-center gap-3">
-                        <img src="{{ asset('storage/images/' . $testimonial['image']) }}"
-                             alt="{{ $testimonial['name'] }}"
-                             class="w-12 h-12 object-cover rounded-full border-2 border-[#1e3a8a]/20 lazy-load"
-                             loading="lazy">
+                       <img src="{{ asset('storage/images/' . $testimonial['image']) }}"
+     alt="{{ $testimonial['name'] }}"
+     class="w-12 h-12 object-cover rounded-full border-2 border-[#1e3a8a]/20"
+     loading="lazy"
+     decoding="async">
                         <div>
                             <p class="font-bold text-gray-800">{{ $testimonial['name'] }}</p>
                             <p class="text-sm text-gray-500">{{ $testimonial['role'] }}</p>
@@ -458,21 +466,6 @@
             }
         });
         
-        // Lazy loading images
-        if ('IntersectionObserver' in window) {
-            const lazyImages = document.querySelectorAll('.lazy-load');
-            const imageObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        img.classList.remove('lazy-load');
-                        imageObserver.unobserve(img);
-                    }
-                });
-            });
-            
-            lazyImages.forEach(img => imageObserver.observe(img));
-        }
     </script>
     
     <style>

@@ -3,6 +3,7 @@
 @section('content')
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-5xl mx-auto px-4">
+
         <div class="mb-6 flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Services I Requested</h1>
@@ -18,8 +19,8 @@
             <div class="space-y-4">
                 @foreach($myBookings as $booking)
                     <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                        <div class="flex justify-between gap-4">
-                            <div>
+                        <div class="flex flex-col sm:flex-row justify-between gap-4">
+                            <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900">
                                     {{ $booking->skill->title ?? 'Skill Deleted' }}
                                 </h3>
@@ -46,20 +47,80 @@
                             </span>
                         </div>
 
-                        <div class="mt-4 border-t pt-4 flex justify-between items-center">
-                            <span class="text-xs text-gray-400">
-                                Requested {{ $booking->created_at->diffForHumans() }}
-                            </span>
+                        <div class="mt-4 border-t pt-4 space-y-4">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <span class="text-xs text-gray-400">
+                                    Requested {{ $booking->created_at->diffForHumans() }}
+                                </span>
 
-                            @if($booking->status === 'interested')
-                                <span class="text-sm text-gray-500">Waiting for provider confirmation</span>
-                            @elseif($booking->status === 'confirmed')
-                                <button onclick="clientConfirmBooking({{ $booking->id }})"
-                                        class="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600">
-                                    Mark as Done
-                                </button>
-                            @elseif($booking->status === 'done')
-                                <span class="text-sm text-green-600">✓ Service Completed</span>
+                                @if($booking->status === 'interested')
+                                    <span class="text-sm text-gray-500">
+                                        Waiting for provider confirmation
+                                    </span>
+
+                                @elseif($booking->status === 'confirmed')
+                                    @if($booking->client_confirmed_at)
+                                        <div class="px-4 py-2 bg-amber-50 text-amber-700 text-sm rounded-lg border border-amber-200">
+                                            <i class="fa-solid fa-clock mr-2"></i>
+                                            You confirmed — waiting for provider to mark delivered
+                                        </div>
+                                    @else
+                                        <button onclick="clientConfirmBooking({{ $booking->id }})"
+                                                class="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600">
+                                            Confirm Service Received
+                                        </button>
+                                    @endif
+
+                                @elseif($booking->status === 'done')
+                                    <span class="text-sm text-green-600 font-medium">
+                                        ✓ Service Completed
+                                    </span>
+                                @endif
+                            </div>
+
+                            @if($booking->status === 'done')
+                                @php
+                                    $hasRated = $booking->ratings
+                                        ->where('reviewer_id', auth()->id())
+                                        ->count() > 0;
+                                @endphp
+
+                                @if(!$hasRated)
+                                    <div class="p-4 bg-white border border-gray-200 rounded-xl">
+                                        <h6 class="font-semibold text-gray-800 mb-3">
+                                            Rate Your Experience
+                                        </h6>
+
+                                        <div class="flex gap-1 mb-3" id="booking-rating-stars-{{ $booking->id }}">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <button type="button"
+                                                        onclick="setBookingInlineRating({{ $booking->id }}, {{ $i }})"
+                                                        class="text-3xl text-gray-300 hover:text-yellow-400 transition-colors">
+                                                    ★
+                                                </button>
+                                            @endfor
+                                        </div>
+
+                                        <textarea id="booking-review-{{ $booking->id }}"
+                                                  placeholder="Share your experience (optional)"
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3"
+                                                  rows="3"
+                                                  maxlength="500"></textarea>
+
+                                        <button onclick="submitBookingInlineRating({{ $booking->id }})"
+                                                class="w-full px-4 py-2 bg-[#1e3a8a] text-white rounded-lg hover:bg-[#0f2b5e]">
+                                            <i class="fa-solid fa-star mr-2"></i>
+                                            Submit Rating
+                                        </button>
+                                    </div>
+                                @else
+                                    <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                        <p class="text-sm text-emerald-800">
+                                            <i class="fa-solid fa-check-circle mr-2"></i>
+                                            Service Completed & Rated
+                                        </p>
+                                    </div>
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -68,6 +129,7 @@
         @else
             <div class="bg-white rounded-xl border border-gray-200 p-10 text-center">
                 <p class="text-gray-500">You have not requested any services yet.</p>
+
                 <a href="{{ route('skills.index') }}" class="inline-block mt-4 px-5 py-2 bg-[#1e3a8a] text-white rounded-lg">
                     Browse Skills
                 </a>
@@ -78,7 +140,7 @@
 
 <script>
 function clientConfirmBooking(bookingId) {
-    if (!confirm('Mark this service as received and done?')) return;
+    if (!confirm('Confirm that you received this service?')) return;
 
     fetch(`/bookings/${bookingId}/client-confirm`, {
         method: 'POST',
@@ -93,6 +155,60 @@ function clientConfirmBooking(bookingId) {
         else alert(data.message || 'Error confirming completion');
     })
     .catch(() => alert('Error confirming completion'));
+}
+
+function setBookingInlineRating(bookingId, rating) {
+    const container = document.getElementById(`booking-rating-stars-${bookingId}`);
+    if (!container) return;
+
+    container.setAttribute('data-selected', rating);
+
+    const stars = container.querySelectorAll('button');
+
+    stars.forEach((star, index) => {
+        star.classList.remove('text-yellow-400', 'text-gray-300');
+
+        if (index < rating) {
+            star.classList.add('text-yellow-400');
+        } else {
+            star.classList.add('text-gray-300');
+        }
+    });
+}
+
+function submitBookingInlineRating(bookingId) {
+    const container = document.getElementById(`booking-rating-stars-${bookingId}`);
+    const rating = container ? container.getAttribute('data-selected') : null;
+
+    if (!rating) {
+        alert('Please select a star rating before submitting.');
+        return;
+    }
+
+    const review = document.getElementById(`booking-review-${bookingId}`)?.value || '';
+
+    fetch(`/bookings/${bookingId}/rate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            rating: parseInt(rating),
+            review: review
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Rating submitted successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Error submitting rating');
+        }
+    })
+    .catch(() => alert('Error submitting rating'));
 }
 </script>
 @endsection

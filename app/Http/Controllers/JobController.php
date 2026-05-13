@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Job;
 use App\Models\JobApplication;
 use App\Models\User;
+use App\Models\Notification;
 
 class JobController extends Controller
 {
@@ -117,9 +118,10 @@ class JobController extends Controller
         // Check if current user has already applied
         $userApplication = null;
         if (auth()->check()) {
-            $userApplication = $job->applications()
-                ->where('applicant_id', auth()->id())
-                ->first();
+          $userApplication = $job->applications()
+    ->where('applicant_id', auth()->id())
+    ->whereIn('status', ['pending', 'accepted'])
+    ->first();
         }
 
         // If user is not authenticated, show limited view
@@ -155,8 +157,9 @@ class JobController extends Controller
         
         // Check if user has already applied
         $existingApplication = $job->applications()
-            ->where('applicant_id', auth()->id())
-            ->first();
+    ->where('applicant_id', auth()->id())
+    ->whereIn('status', ['pending', 'accepted'])
+    ->first();
             
         if ($existingApplication) {
             return back()->with('error', 'You have already applied for this job');
@@ -176,9 +179,17 @@ class JobController extends Controller
         
         // Increment applications count
         $job->increment('applications_count');
+
+        Notification::createNotification(
+    $job->employer_id,
+    'job_application',
+    'New Job Application',
+    auth()->user()->first_name . ' applied to your job: ' . $job->title,
+    '/received-applications'
+);
         
        // In JobController.php → apply() method
-return redirect()->route('jobs.show', $job->id)
+        return redirect()->route('jobs.show', $job->id)
                  ->with('success', 'Your application has been submitted successfully!')
                  ->with('flash_success', true);   // Extra force
     }
@@ -217,6 +228,18 @@ return redirect()->route('jobs.show', $job->id)
             'requirements' => $request->requirements,
             'status' => 'active',
         ]);
+
+        $users = User::where('id', '!=', auth()->id())->get();
+
+        foreach ($users as $user) {
+            Notification::createNotification(
+                $user->id,
+                'new_job',
+                'New Job Posted',
+                auth()->user()->first_name . ' posted a new job: ' . $job->title,
+               '/jobs/' . $job->id
+            );
+        }
         
         return redirect()->route('dashboard')
             ->with('success', 'Job posted successfully!');
@@ -353,16 +376,22 @@ return redirect()->route('jobs.show', $job->id)
             'cover_letter' => 'required|string|min:50|max:1000'
         ]);
 
+        if ($application->status !== 'pending') {
+            return redirect()
+                ->route('applications.mine')
+                ->with('error', 'You can only update applications that are still pending.');
+        }
+
         // Update application
         $application->update([
             'cover_letter' => $request->cover_letter,
         ]);
 
         if ($request->expectsJson()) {
-    return response()->json([
-        'success' => true,
-        'message' => 'Application updated successfully!'
-    ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Application updated successfully!'
+        ]);
 }
 
     return redirect()

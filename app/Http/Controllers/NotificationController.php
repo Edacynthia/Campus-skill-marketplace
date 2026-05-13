@@ -58,4 +58,17 @@ class NotificationController extends Controller
             'notifications' => $notifications
         ]);
     }
+
+    public function open($id)
+{
+    $notification = Notification::where('id', $id)
+        ->where('user_id', Auth::id())
+        ->firstOrFail();
+
+    if (!$notification->is_read) {
+        $notification->markAsRead();
+    }
+
+    return redirect($notification->url ?: route('notifications.index'));
+}
 }

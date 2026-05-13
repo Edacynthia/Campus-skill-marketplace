@@ -37,72 +37,164 @@
                 <!-- Desktop Logged-in User View -->
                 <div class="hidden md:flex items-center gap-4">
                     <!-- Notification Bell -->
-                    <div class="relative group">
-                        <button onclick="toggleNotificationDropdown()" class="relative hover:text-[#1e3a8a]">
-                            <i class="fa-solid fa-bell text-xl"></i>
-                            @if(auth()->user()->unreadNotificationCount() > 0)
-                                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                                    {{ auth()->user()->unreadNotificationCount() > 9 ? '9+' : auth()->user()->unreadNotificationCount() }}
-                                </span>
-                            @endif
+                   
+<div class="relative">
+    <button onclick="toggleNotificationDropdown(event)"
+            class="relative hover:text-[#1e3a8a] transition-colors">
+        <i class="fa-solid fa-bell text-xl"></i>
+
+        @if(auth()->user()->unreadNotificationCount() > 0)
+            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
+                {{ auth()->user()->unreadNotificationCount() > 9 ? '9+' : auth()->user()->unreadNotificationCount() }}
+            </span>
+        @endif
+    </button>
+
+    <!-- Notification Dropdown -->
+    <div id="notificationDropdown"
+         class="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 opacity-0 invisible transition-all duration-200 z-50">
+
+        <!-- Header -->
+        <div class="px-4 py-3 border-b border-gray-100">
+            <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-gray-900">
+                    Notifications
+                </h3>
+
+                @if(auth()->user()->unreadNotificationCount() > 0)
+                    <form action="{{ route('notifications.readAll') }}"
+                          method="POST"
+                          class="inline">
+                        @csrf
+
+                        <button type="submit"
+                                class="text-xs text-[#1e3a8a] hover:text-[#0f2b5e] font-medium">
+                            Mark all read
                         </button>
-                        
-                        <!-- Notification Dropdown -->
-                        <div id="notificationDropdown" class="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                            <div class="px-4 py-3 border-b border-gray-100">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="font-semibold text-gray-900">Notifications</h3>
-                                    @if(auth()->user()->unreadNotificationCount() > 0)
-                                        <form action="{{ route('notifications.readAll') }}" method="POST" class="inline">
+                    </form>
+                @endif
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="max-h-96 overflow-y-auto">
+
+            @php
+                $recentNotifications = auth()->user()
+                    ->notifications()
+                    ->latest()
+                    ->take(5)
+                    ->get();
+            @endphp
+
+            @if($recentNotifications->count() > 0)
+
+                @foreach($recentNotifications as $notification)
+
+                    <div class="px-4 py-3 hover:bg-gray-50 border-b border-gray-50 transition-all {{ !$notification->is_read ? 'bg-blue-50' : '' }}">
+
+                        <div class="flex items-start gap-3">
+
+                            <!-- Icon -->
+                            <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+
+                                @if($notification->type === 'message')
+                                    <i class="fa-solid fa-envelope text-blue-600"></i>
+
+                                @elseif($notification->type === 'booking_request')
+                                    <i class="fa-solid fa-calendar-check text-emerald-600"></i>
+
+                                @elseif($notification->type === 'new_skill')
+                                    <i class="fa-solid fa-graduation-cap text-purple-600"></i>
+
+                                @elseif($notification->type === 'new_job')
+                                    <i class="fa-solid fa-briefcase text-amber-600"></i>
+
+                                @elseif($notification->type === 'rating')
+                                    <i class="fa-solid fa-star text-yellow-500"></i>
+
+                                @elseif($notification->type === 'application')
+                                    <i class="fa-solid fa-file-lines text-indigo-600"></i>
+
+                                @else
+                                    <i class="fa-solid fa-bell text-blue-600"></i>
+                                @endif
+
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-1 min-w-0">
+
+                                <div class="flex items-start justify-between gap-2">
+
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900 leading-tight">
+                                            {{ $notification->title }}
+                                        </p>
+
+                                        <p class="text-xs text-gray-600 mt-1 leading-relaxed">
+                                            {{ $notification->message }}
+                                        </p>
+
+                                        <p class="text-[11px] text-gray-400 mt-2">
+                                            {{ $notification->created_at->diffForHumans() }}
+                                        </p>
+                                    </div>
+
+                                    @if(!$notification->is_read)
+                                        <form action="{{ route('notifications.read', $notification->id) }}"
+                                              method="POST">
                                             @csrf
-                                            <button type="submit" class="text-xs text-[#1e3a8a] hover:text-[#0f2b5e]">Mark all read</button>
+
+                                            <button type="submit"
+                                                    class="text-blue-600 hover:text-blue-800 mt-1">
+                                                <i class="fa-solid fa-circle text-[10px]"></i>
+                                            </button>
                                         </form>
                                     @endif
                                 </div>
-                            </div>
-                            
-                            <div class="max-h-80 overflow-y-auto">
-                                @auth
-                                    @php
-                                        $recentNotifications = auth()->user()->notifications()->latest()->take(5)->get();
-                                    @endphp
-                                    @if($recentNotifications->count() > 0)
-                                        @foreach($recentNotifications as $notification)
-                                            <div class="px-4 py-3 hover:bg-gray-50 border-b border-gray-50 {{ !$notification->is_read ? 'bg-blue-50' : '' }}">
-                                                <div class="flex items-start gap-3">
-                                                    <div class="flex-1">
-                                                        <p class="text-sm font-medium text-gray-900">{{ $notification->title }}</p>
-                                                        <p class="text-xs text-gray-600 mt-1">{{ $notification->message }}</p>
-                                                        <p class="text-xs text-gray-400 mt-1">{{ $notification->created_at->diffForHumans() }}</p>
-                                                    </div>
-                                                    @if(!$notification->is_read)
-                                                        <form action="{{ route('notifications.read', $notification->id) }}" method="POST" class="inline">
-                                                            @csrf
-                                                            <button type="submit" class="text-blue-600 hover:text-blue-800">
-                                                                <i class="fa-solid fa-circle text-xs"></i>
-                                                            </button>
-                                                        </form>
-                                                    @endif
-                                                </div>
-                                                @if($notification->url)
-                                                    <a href="{{ $notification->url }}" class="block mt-2 text-xs text-[#1e3a8a] hover:text-[#0f2b5e]">View →</a>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    @else
-                                        <div class="px-4 py-6 text-center text-gray-500">
-                                            <i class="fa-solid fa-bell text-2xl mb-2"></i>
-                                            <p class="text-sm">No notifications</p>
-                                        </div>
-                                    @endif
-                                @endauth
-                            </div>
-                            
-                            <div class="px-4 py-2 border-t border-gray-100">
-                                <a href="{{ route('notifications.index') }}" class="block text-center text-sm text-[#1e3a8a] hover:text-[#0f2b5e]">View all notifications</a>
+
+                                @if($notification->url)
+                                    <a href="{{ route('notifications.open', $notification->id) }}"
+                                       class="inline-flex items-center gap-1 mt-3 text-xs font-medium text-[#1e3a8a] hover:text-[#0f2b5e]">
+                                        View Details
+                                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
+
+                @endforeach
+
+            @else
+
+                <div class="px-6 py-10 text-center">
+                    <div class="w-14 h-14 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-bell text-gray-400 text-xl"></i>
+                    </div>
+
+                    <p class="text-sm font-medium text-gray-700">
+                        No notifications yet
+                    </p>
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        You'll see updates here when activity happens.
+                    </p>
+                </div>
+
+            @endif
+        </div>
+
+        <!-- Footer -->
+        <div class="px-4 py-3 border-t border-gray-100">
+            <a href="{{ route('notifications.index') }}"
+               class="block text-center text-sm font-medium text-[#1e3a8a] hover:text-[#0f2b5e] transition-colors">
+                View all notifications
+            </a>
+        </div>
+    </div>
+</div>
                     
                     <!-- Messages Button -->
                     <a href="{{ route('messages.index') }}" class="relative hover:text-[#1e3a8a]">
@@ -285,7 +377,7 @@
                                 <span class="font-medium">Settings</span>
                             </a>
                             
-                            <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                            <a href="{{ route('notifications.index') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                                 <i class="fa-solid fa-bell text-lg"></i>
                                 <span class="font-medium">Notifications</span>
                                 <span class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">3</span>
@@ -322,6 +414,19 @@ function toggleDropdown(event) {
     } else {
         dropdown.classList.remove('opacity-0', 'invisible');
         dropdown.classList.add('opacity-100');
+    }
+}
+
+function toggleNotificationDropdown() {
+    const dropdown = document.getElementById('notificationDropdown');
+
+    if (dropdown.classList.contains('opacity-100')) {
+        dropdown.classList.remove('opacity-100');
+        dropdown.classList.add('opacity-0', 'invisible');
+    } else {
+        dropdown.classList.remove('opacity-0', 'invisible');
+        dropdown.classList.add('opacity-100');
+        dropdown.classList.remove('invisible');
     }
 }
 
@@ -375,4 +480,28 @@ document.addEventListener('keydown', function(event) {
         }
     }
 });
+
+function toggleNotificationDropdown(event) {
+    event.stopPropagation();
+
+    const dropdown = document.getElementById('notificationDropdown');
+
+    dropdown.classList.toggle('opacity-100');
+    dropdown.classList.toggle('visible');
+    dropdown.classList.toggle('opacity-0');
+    dropdown.classList.toggle('invisible');
+}
+
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('notificationDropdown');
+    const bellButton = event.target.closest('[onclick^="toggleNotificationDropdown"]');
+
+    if (!dropdown) return;
+
+    if (!dropdown.contains(event.target) && !bellButton) {
+        dropdown.classList.remove('opacity-100', 'visible');
+        dropdown.classList.add('opacity-0', 'invisible');
+    }
+});
+
 </script>

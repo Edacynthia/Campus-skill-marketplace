@@ -102,9 +102,12 @@
                                     @endif
                                 </div>
                                 
-                                <a href="{{ route('applications.show', $application->id) }}" class="text-sm text-[#1e3a8a] hover:text-[#0f2b5e] font-medium">
-                                    View Details <i class="fa-solid fa-arrow-right ml-1"></i>
-                                </a>
+                               @if($application->status === 'pending')
+    <a href="{{ route('applications.show', $application->id) }}"
+       class="text-[#1e3a8a] hover:underline">
+        View Details
+    </a>
+@endif
                             </div>
                         </div>
                     </div>
