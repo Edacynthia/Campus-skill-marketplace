@@ -53,4 +53,20 @@ class Notification extends Model
             'url' => $url,
         ]);
     }
+
+    public static function notifyAdmins($type, $title, $message, $url = null)
+{
+    $admins = User::where('role', 'admin')->get();
+
+    foreach ($admins as $admin) {
+        self::createNotification(
+            $admin->id,
+            $type,
+            $title,
+            $message,
+            $url
+        );
+    }
+}
+
 }

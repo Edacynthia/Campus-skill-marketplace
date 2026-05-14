@@ -84,7 +84,8 @@
                         </div>
                         <p class="text-sm text-gray-600 leading-snug">Ready to earn? Find jobs posted by the community.</p>
                         <a href="{{ route('jobs.index') }}"
-   class="group px-6 sm:px-8 py-4 bg-emerald-700 text-white font-bold rounded-2xl hover:bg-emerald-600 transition-all transform hover:scale-105 shadow-lg">
+                           class="inline-flex items-center text-sm font-semibold text-emerald-700 hover:gap-2 transition-all group">
+   {{-- class="group px-6 sm:px-8 py-4 bg-emerald-700 text-white font-bold rounded-2xl hover:bg-emerald-600 transition-all transform hover:scale-105 shadow-lg"> --}}
                             Browse Jobs 
                             <i class="fa-solid fa-arrow-right ml-1 group-hover:ml-2 transition-all"></i>
                         </a>

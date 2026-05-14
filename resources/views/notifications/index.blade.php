@@ -94,7 +94,10 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-800 mb-2">No Notifications</h3>
                     <p class="text-gray-500 mb-6">You're all caught up! No new notifications to show.</p>
-                    <a href="{{ route('dashboard') }}" class="inline-flex items-center px-6 py-3 bg-[#1e3a8a] text-white font-semibold rounded-full hover:bg-[#0f2b5e] transition-all">
+                    <a href="{{ auth()->user()->role === 'admin' 
+                            ? route('admin.dashboard') 
+                            : route('dashboard') }}"
+                    class="inline-flex items-center px-6 py-3 bg-[#1e3a8a] text-white font-semibold rounded-full hover:bg-[#0f2b5e] transition-all">
                         Back to Dashboard
                     </a>
                 </div>

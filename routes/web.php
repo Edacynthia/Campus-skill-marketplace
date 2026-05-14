@@ -1,21 +1,22 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminUserApprovalController;
+use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\OTPController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SkillController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobProgressController;
-use App\Http\Controllers\BookingController;
 use App\Http\Controllers\MessageController; 
 use App\Http\Controllers\NotificationController; 
-use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\ProfileController;
 
 
-use Illuminate\Support\Facades\Mail;
+use App\Http\Controllers\SkillController;
+use Illuminate\Http\Request;
 
 Route::get('/test-mail', function () {
     Mail::raw('Laravel email test is working.', function ($message) {
@@ -29,15 +30,30 @@ Route::get('/test-mail', function () {
 // ====================== PUBLIC ROUTES ======================
 Route::get('/', function () {
     if (auth()->check()) {
+        $user = auth()->user();
+
+        // Pending users should see the guest home, not the dashboard
+        if ($user->isPendingApproval()) {
+            return view('home');
+        }
+
+        // Admin goes to admin panel
+        if ($user->hasRole('admin') || $user->role === 'admin') {
+            return redirect()->route('admin.users.pending');
+        }
+
         return redirect()->route('dashboard');
     }
     return view('home');
 })->name('home');
 
+
 Route::get('/skills', [SkillController::class, 'index'])->name('skills.index');
 Route::get('/jobs', [JobController::class, 'index'])->name('jobs.index');
 // Route::get('/search', fn() => 'Search results coming...')->name('search');
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
+
 
 Route::get('/search', function (Request $request) {
     $type = $request->get('type', 'skills');
@@ -69,8 +85,13 @@ Route::post('/otp/send', [OTPController::class, 'sendOTP'])->name('otp.send');
 Route::get('/otp/verify', [OTPController::class, 'showVerificationForm'])->name('otp.verification.form');
 Route::post('/otp/verify', [OTPController::class, 'verifyOTP'])->name('otp.verify');
 
+// ====================== APPROVAL ROUTES ======================
+Route::get('/approval-pending', function () {
+    return view('auth.approval-pending');
+})->name('approval.pending');
+
 // ====================== PROTECTED ROUTES ======================
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Routes
@@ -132,7 +153,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // ====================== MESSAGING ROUTES ======================
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::post('/messages/{id}/read', [MessageController::class, 'markAsRead'])->name('messages.read');
@@ -142,13 +163,24 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // ====================== NOTIFICATION ROUTES ======================
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
     Route::get('/api/notifications/count', [NotificationController::class, 'getUnreadCount']);
     Route::get('/api/notifications/recent', [NotificationController::class, 'getRecentNotifications']);
     Route::get('/notifications/{id}/open', [NotificationController::class, 'open'])->name('notifications.open');
+});
+
+// ====================== ADMIN ROUTES ======================
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/users/pending-approvals', [AdminUserApprovalController::class, 'pending'])->name('users.pending');
+    Route::post('/users/{user}/approve', [AdminUserApprovalController::class, 'approve'])->name('users.approve');
+    Route::post('/users/{user}/reject', [AdminUserApprovalController::class, 'reject'])->name('users.reject');
+    Route::get('/users/all-approvals', [AdminUserApprovalController::class, 'index'])->name('users.all');
+    Route::get('/admin/users', [AdminController::class, 'users'])->name('users');
+    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+
 });
 
 // ====================== WILDCARD ROUTES LAST ======================

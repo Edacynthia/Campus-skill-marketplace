@@ -18,6 +18,9 @@ class User extends Authenticatable
         'password',
         'passport_photo',     // for non-university users
         'is_approved',        // important for external users
+        'approval_status',    // approved, pending, rejected
+        'approved_at',        // when approved
+        'approved_by',        // who approved (admin id)
         'department',
         'matric_number',
         'staff_id',
@@ -37,6 +40,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'is_approved'       => 'boolean',
+            'approval_status'   => 'string',
+            'approved_at'       => 'datetime',
             'otp_expires_at'    => 'datetime',
             'otp_verified'       => 'boolean',
         ];
@@ -61,6 +66,38 @@ class User extends Authenticatable
         }
         
         return false;
+    }
+
+    // New helper methods for approval workflow
+    public function isUniversityEmail(): bool
+    {
+        return $this->hasUniversityEmail();
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved' || ($this->hasUniversityEmail() && $this->is_approved);
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->approval_status === 'pending' && !$this->hasUniversityEmail();
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'rejected';
+    }
+
+    public function requiresAdminApproval(): bool
+    {
+        return !$this->hasUniversityEmail();
+    }
+
+    // Relationship: who approved this user
+    public function approvedByUser()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function skills()

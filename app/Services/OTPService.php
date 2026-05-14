@@ -24,7 +24,7 @@ class OTPService
     ]);
 
     try {
-        Mail::to($user->email)->send(new OTPMail($otp, $user->first_name));
+        Mail::to($user->email)->queue(new OTPMail($otp, $user->first_name));
 
         return true;
     } catch (\Exception $e) {

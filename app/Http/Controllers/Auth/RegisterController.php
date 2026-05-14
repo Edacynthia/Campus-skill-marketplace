@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\OTPService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Models\Notification;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class RegisterController extends Controller
@@ -40,7 +43,13 @@ class RegisterController extends Controller
         $rules = [
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
-            'email'      => 'required|email|unique:users,email',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->where(function ($query) {
+                    return $query->where('approval_status', '!=', 'rejected');
+                }),
+            ],
             'password'   => [
                 'required',
                 'confirmed',
@@ -64,6 +73,21 @@ class RegisterController extends Controller
             $passportPath = $request->file('passport_photo')->store('passports', 'public');
         }
 
+        $rejectedUser = User::where('email', $request->email)
+    ->where('approval_status', 'rejected')
+    ->first();
+
+if ($rejectedUser) {
+
+    if ($rejectedUser->passport_photo &&
+        Storage::disk('public')->exists($rejectedUser->passport_photo)) {
+
+        Storage::disk('public')->delete($rejectedUser->passport_photo);
+    }
+
+    $rejectedUser->delete();
+}
+
         $user = User::create([
             'first_name'     => $request->first_name,
             'last_name'      => $request->last_name,
@@ -71,11 +95,21 @@ class RegisterController extends Controller
             'password'       => Hash::make($request->password),
             'role'           => 'user',
             'is_approved'    => $isUniversityEmail,
+            'approval_status' => $isUniversityEmail ? 'approved' : 'pending',
             'passport_photo' => $passportPath,
             'otp_verified'   => false, // Ensure OTP verification is required
         ]);
 
         $user->assignRole('user');
+
+        if (!$user->is_university_user) {
+    Notification::notifyAdmins(
+        'new_pending_user',
+        'New Pending User Approval',
+        $user->first_name . ' ' . $user->last_name . ' is waiting for admin approval.',
+        route('admin.users.pending')
+    );
+}
         
         // Send OTP to the newly registered user
         if ($this->otpService->sendOTP($user)) {
