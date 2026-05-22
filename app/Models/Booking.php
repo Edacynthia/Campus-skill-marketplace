@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class Booking extends Model
 {
@@ -17,6 +18,17 @@ class Booking extends Model
         'message',
         'client_confirmed_at',
         'provider_confirmed_at',
+        'completed_at',
+        'payment_status',
+        'payment_confirmed_at',
+        'payment_confirmed_by',
+        'status',
+        'payment_status',
+        'client_paid_at',
+        'provider_payment_confirmed_at',
+        'payment_dispute_reason',
+        'payment_disputed_at',
+        'payment_resolved_at',
         'completed_at',
     ];
 
@@ -59,5 +71,10 @@ class Booking extends Model
             'done' => 'Completed',
             default => ucfirst($this->status),
         };
+    }
+
+    public function paymentConfirmedBy()
+    {
+        return $this->belongsTo(User::class, 'payment_confirmed_by');
     }
 }

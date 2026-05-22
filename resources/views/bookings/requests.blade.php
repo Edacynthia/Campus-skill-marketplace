@@ -19,6 +19,7 @@
             <div class="space-y-4">
                 @foreach($myBookings as $booking)
                     <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                        
                         <div class="flex flex-col sm:flex-row justify-between gap-4">
                             <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900">
@@ -40,45 +41,94 @@
 
                             <span class="h-fit text-xs px-3 py-1 rounded-full font-medium
                                 @if($booking->status === 'interested') bg-amber-50 text-amber-700
-                                @elseif($booking->status === 'confirmed') bg-emerald-50 text-emerald-700
-                                @elseif($booking->status === 'done') bg-blue-50 text-blue-700
-                                @else bg-gray-50 text-gray-700 @endif">
+                                @elseif($booking->status === 'confirmed') bg-blue-50 text-blue-700
+                                @elseif($booking->status === 'in_progress') bg-indigo-50 text-indigo-700
+                                @elseif($booking->status === 'completed_waiting_payment') bg-emerald-50 text-emerald-700
+                                @elseif($booking->status === 'done') bg-green-50 text-green-700
+                                @else bg-red-50 text-red-700 @endif">
                                 {{ $booking->statusLabel() }}
                             </span>
                         </div>
 
-                        <div class="mt-4 border-t pt-4 space-y-4">
-                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="mt-4 border-t pt-4 space-y-5">
+
+                            <div>
                                 <span class="text-xs text-gray-400">
                                     Requested {{ $booking->created_at->diffForHumans() }}
                                 </span>
-
-                                @if($booking->status === 'interested')
-                                    <span class="text-sm text-gray-500">
-                                        Waiting for provider confirmation
-                                    </span>
-
-                                @elseif($booking->status === 'confirmed')
-                                    @if($booking->client_confirmed_at)
-                                        <div class="px-4 py-2 bg-amber-50 text-amber-700 text-sm rounded-lg border border-amber-200">
-                                            <i class="fa-solid fa-clock mr-2"></i>
-                                            You confirmed — waiting for provider to mark delivered
-                                        </div>
-                                    @else
-                                        <button onclick="clientConfirmBooking({{ $booking->id }})"
-                                                class="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600">
-                                            Confirm Service Received
-                                        </button>
-                                    @endif
-
-                                @elseif($booking->status === 'done')
-                                    <span class="text-sm text-green-600 font-medium">
-                                        ✓ Service Completed
-                                    </span>
-                                @endif
                             </div>
 
-                            @if($booking->status === 'done')
+                            @if($booking->status === 'interested')
+                                <span class="text-sm text-gray-500">
+                                    Waiting for provider confirmation
+                                </span>
+                            @else
+                                <div class="w-full">
+                                    <div class="flex items-center gap-2 flex-wrap">
+
+                                        <div class="px-3 py-2 rounded-full text-xs font-semibold
+                                            {{ in_array($booking->status, ['confirmed','in_progress','completed_waiting_payment','done']) ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600' }}">
+                                            Confirmed
+                                        </div>
+
+                                        <div class="w-8 h-1 bg-gray-300"></div>
+
+                                        <div class="px-3 py-2 rounded-full text-xs font-semibold
+                                            {{ in_array($booking->status, ['in_progress','completed_waiting_payment','done']) ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600' }}">
+                                            In Progress
+                                        </div>
+
+                                        <div class="w-8 h-1 bg-gray-300"></div>
+
+                                        <div class="px-3 py-2 rounded-full text-xs font-semibold
+                                            {{ in_array($booking->status, ['completed_waiting_payment','done']) ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-600' }}">
+                                            Completed
+                                        </div>
+
+                                        <div class="w-8 h-1 bg-gray-300"></div>
+
+                                        <div class="px-3 py-2 rounded-full text-xs font-semibold
+                                            {{ $booking->status === 'completed_waiting_payment' && $booking->payment_status !== 'provider_confirmed_received' ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-600' }}">
+                                            Waiting Payment
+                                        </div>
+
+                                        <div class="w-8 h-1 bg-gray-300"></div>
+
+                                        <div class="px-3 py-2 rounded-full text-xs font-semibold
+                                            {{ $booking->status === 'done' && $booking->payment_status === 'provider_confirmed_received' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600' }}">
+                                            Paid
+                                        </div>
+
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($booking->status === 'completed_waiting_payment' && $booking->payment_status === 'unpaid')
+                                <button onclick="clientMarkedPaid({{ $booking->id }})"
+                                        class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                                    I Have Paid
+                                </button>
+
+                            @elseif($booking->payment_status === 'client_marked_paid')
+                                <div class="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-sm">
+                                    Waiting for provider to confirm payment.
+                                </div>
+
+                            @elseif($booking->payment_status === 'payment_disputed')
+                                <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <p class="text-sm text-red-700 font-semibold">
+                                        Payment dispute opened. Admin reviewing issue.
+                                    </p>
+
+                                    @if($booking->payment_dispute_reason)
+                                        <p class="text-sm text-red-600 mt-1">
+                                            Provider's message: {{ $booking->payment_dispute_reason }}
+                                        </p>
+                                    @endif
+                                </div>
+                            @endif
+
+                            @if($booking->status === 'done' && $booking->payment_status === 'provider_confirmed_received')
                                 @php
                                     $hasRated = $booking->ratings
                                         ->where('reviewer_id', auth()->id())
@@ -86,7 +136,7 @@
                                 @endphp
 
                                 @if(!$hasRated)
-                                    <div class="p-4 bg-white border border-gray-200 rounded-xl">
+                                    <div class="p-4 bg-white border border-gray-200 rounded-xl max-w-md">
                                         <h6 class="font-semibold text-gray-800 mb-3">
                                             Rate Your Experience
                                         </h6>
@@ -122,6 +172,7 @@
                                     </div>
                                 @endif
                             @endif
+
                         </div>
                     </div>
                 @endforeach
@@ -139,10 +190,10 @@
 </div>
 
 <script>
-function clientConfirmBooking(bookingId) {
-    if (!confirm('Confirm that you received this service?')) return;
+function clientMarkedPaid(bookingId) {
+    if (!confirm('Confirm that you have paid the provider?')) return;
 
-    fetch(`/bookings/${bookingId}/client-confirm`, {
+    fetch(`/bookings/${bookingId}/client-paid`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -152,9 +203,9 @@ function clientConfirmBooking(bookingId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) location.reload();
-        else alert(data.message || 'Error confirming completion');
+        else alert(data.message || 'Error confirming payment');
     })
-    .catch(() => alert('Error confirming completion'));
+    .catch(() => alert('Error confirming payment'));
 }
 
 function setBookingInlineRating(bookingId, rating) {

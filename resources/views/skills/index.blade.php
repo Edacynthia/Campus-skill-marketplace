@@ -285,6 +285,19 @@
         @if($skills->count() > 0)
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-7">
                 @foreach($skills as $skill)
+                @php
+    $skillAverageRating = \App\Models\Rating::where('type', 'client_to_provider')
+        ->whereHas('booking', function ($query) use ($skill) {
+            $query->where('skill_id', $skill->id);
+        })
+        ->avg('rating');
+
+    $skillReviewsCount = \App\Models\Rating::where('type', 'client_to_provider')
+        ->whereHas('booking', function ($query) use ($skill) {
+            $query->where('skill_id', $skill->id);
+        })
+        ->count();
+@endphp
                     <div class="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-gray-200">
                         <div class="relative">
                             @if($skill->image)
@@ -298,8 +311,8 @@
                             
                             <div class="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-semibold shadow-md flex items-center gap-1">
                                 <i class="fa-solid fa-star text-yellow-400 text-xs"></i>
-                                <span>{{ $skill->rating ?: '5.0' }}</span>
-                                <span class="text-gray-400 text-xs ml-0.5">({{ $skill->reviews_count ?? 0 }})</span>
+                                <span>{{ $skillAverageRating ? number_format($skillAverageRating, 1) : '0.0' }}</span>
+                                <span class="text-gray-400 text-xs ml-0.5">({{ $skillReviewsCount }})</span>
                             </div>
                             <span class="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold shadow-sm">
                                 {{ $skill->category }}
@@ -345,8 +358,8 @@
                                     <div class="text-right">
                                         <div class="flex items-center gap-1 text-sm">
                                             <i class="fa-solid fa-star text-yellow-400"></i>
-                                            <span class="font-semibold">{{ $skill->rating ?: '5.0' }}</span>
-                                            <span class="text-gray-400 text-xs">({{ $skill->reviews_count ?? 0 }})</span>
+                                            <span class="font-semibold">{{ $skillAverageRating ? number_format($skillAverageRating, 1) : '0.0' }}</span>
+                                            <span class="text-gray-400 text-xs">({{ $skillReviewsCount }})</span>
                                         </div>
                                     </div>
                                 </div>
@@ -358,6 +371,7 @@
                         </div>
                     </div>
                 @endforeach
+
             </div>
 
             <!-- Pagination -->

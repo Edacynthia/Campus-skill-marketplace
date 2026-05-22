@@ -4,10 +4,17 @@
     <div class="min-h-screen bg-gray-50 py-12">
         <div class="max-w-6xl mx-auto px-6">
             <!-- Page Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">Messages</h1>
-                <p class="text-gray-600">Communicate with service providers and job applicants</p>
-            </div>
+            <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Messages</h1>
+        <p class="text-gray-600">Communicate with service providers and job applicants</p>
+    </div>
+
+    <a href="{{ route('messages.archived') }}"
+       class="inline-flex items-center justify-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900">
+        Archived Messages
+    </a>
+</div>
 
             <!-- Success Messages -->
             {{-- @if(session('success'))
@@ -123,14 +130,16 @@
                                     </div>
                                     
                                     <div class="flex items-center gap-2">
-                                        <form action="{{ route('messages.archive', $message->id) }}" method="POST" class="inline">
-                                            @csrf
-                                            <button type="submit" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-all">
-                                                Archive
-                                            </button>
-                                        </form>
+                        <form action="{{ route('messages.archive', $message->id) }}" method="POST" class="inline">
+    @csrf
+
+    <button type="submit"
+            class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">
+        Archive
+    </button>
+</form>
                                         
-                                        @if($message->sender_id == auth()->id())
+                                      @if($message->sender_id == auth()->id() || $message->receiver_id == auth()->id())
                                             <form action="{{ route('messages.destroy', $message->id) }}" method="POST" class="inline" 
                                                   onsubmit="return confirm('Are you sure you want to delete this message?')">
                                                 @csrf

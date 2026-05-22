@@ -144,10 +144,21 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Booking Routes
     Route::post('/skills/{skillId}/book', [BookingController::class, 'store'])->name('bookings.store');
     Route::post('/bookings/{id}/confirm', [BookingController::class, 'confirm'])->name('bookings.confirm');
-    Route::post('/bookings/{id}/client-confirm', [BookingController::class, 'clientConfirm'])->name('bookings.clientConfirm');
-    Route::post('/bookings/{id}/provider-confirm', [BookingController::class, 'providerConfirm'])->name('bookings.providerConfirm');
+    Route::post('/bookings/{id}/payment-sent', [BookingController::class, 'confirmPaymentSent'])->name('bookings.payment.sent');
+    Route::post('/bookings/{id}/payment-received', [BookingController::class, 'confirmPaymentReceived'])->name('bookings.payment.received');
     Route::post('/bookings/{id}/decline', [BookingController::class, 'decline'])->name('bookings.decline');
     Route::post('/bookings/{id}/rate', [BookingController::class, 'submitRating'])->name('bookings.rate');
+   Route::post('/bookings/{id}/update-progress', [BookingController::class, 'updateProgress'])
+    ->name('bookings.updateProgress');
+
+Route::post('/bookings/{id}/client-paid', [BookingController::class, 'clientMarkedPaid'])
+    ->name('bookings.clientPaid');
+
+Route::post('/bookings/{id}/payment-received', [BookingController::class, 'providerReceivedPayment'])
+    ->name('bookings.paymentReceived');
+
+Route::post('/bookings/{id}/payment-not-received', [BookingController::class, 'providerPaymentNotReceived'])
+    ->name('bookings.paymentNotReceived');
 
     // Job Route::middleware(['auth'])->group(function () {
 });
@@ -160,6 +171,10 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::post('/messages/{id}/reply', [MessageController::class, 'reply'])->name('messages.reply');
     Route::post('/messages/{id}/archive', [MessageController::class, 'archive'])->name('messages.archive');
     Route::delete('/messages/{id}', [MessageController::class, 'destroy'])->name('messages.destroy');
+    Route::get('/messages/archived', [MessageController::class, 'archived'])
+    ->name('messages.archived');
+    Route::post('/messages/{id}/unarchive', [MessageController::class, 'unarchive'])
+    ->name('messages.unarchive');
 });
 
 // ====================== NOTIFICATION ROUTES ======================

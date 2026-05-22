@@ -186,21 +186,79 @@
                         </div>
                     </div>
                     
-                    @if($job->deadline)
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-500">Application Deadline</p>
-                                    <p class="font-medium text-gray-900">{{ $job->deadline->format('F j, Y') }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="px-3 py-1 {{ $job->deadline->isPast() ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700' }} rounded-full text-sm font-medium">
-                                        {{ $job->deadline_days }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
+                   @if($job->deadline)
+
+<div class="mt-4 pt-4 border-t border-gray-200">
+
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <p class="text-sm text-gray-500">Application Deadline</p>
+
+            <p class="font-medium text-gray-900">
+                {{ $job->deadline->format('F j, Y • g:i A') }}
+            </p>
+        </div>
+
+        @if($job->deadline->isPast())
+            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                Deadline Passed
+            </span>
+        @endif
+    </div>
+
+    @if(!$job->deadline->isPast())
+
+    <div
+        class="flex items-center gap-4"
+        data-countdown="{{ $job->deadline->timestamp }}"
+    >
+
+        {{-- Days --}}
+        <div class="text-center">
+            <div class="bg-white shadow-md rounded-xl border border-gray-200 w-24 h-24 flex items-center justify-center">
+                <span class="countdown-days text-5xl font-black text-gray-900">
+                    00
+                </span>
+            </div>
+
+            <p class="mt-2 text-sm font-semibold text-gray-700 tracking-wide">
+                DAYS
+            </p>
+        </div>
+
+        {{-- Hours --}}
+        <div class="text-center">
+            <div class="bg-white shadow-md rounded-xl border border-gray-200 w-24 h-24 flex items-center justify-center">
+                <span class="countdown-hours text-5xl font-black text-gray-900">
+                    00
+                </span>
+            </div>
+
+            <p class="mt-2 text-sm font-semibold text-gray-700 tracking-wide">
+                HOURS
+            </p>
+        </div>
+
+        {{-- Minutes --}}
+        <div class="text-center">
+            <div class="bg-white shadow-md rounded-xl border border-gray-200 w-24 h-24 flex items-center justify-center">
+                <span class="countdown-minutes text-5xl font-black text-gray-900">
+                    00
+                </span>
+            </div>
+
+            <p class="mt-2 text-sm font-semibold text-gray-700 tracking-wide">
+                MINUTES
+            </p>
+        </div>
+
+    </div>
+
+    @endif
+
+</div>
+
+@endif
                 </div>
 
                 <!-- Application Status -->
@@ -415,5 +473,55 @@
                 if (e.target === this) hideApplicationForm();
             });
         @endif
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const countdowns = document.querySelectorAll('[data-countdown]');
+
+    countdowns.forEach(countdown => {
+
+        const deadline = parseInt(countdown.dataset.countdown) * 1000;
+
+        const daysElement = countdown.querySelector('.countdown-days');
+        const hoursElement = countdown.querySelector('.countdown-hours');
+        const minutesElement = countdown.querySelector('.countdown-minutes');
+
+        function updateCountdown() {
+
+            const now = new Date().getTime();
+            const distance = deadline - now;
+
+            if (distance <= 0) {
+
+                daysElement.textContent = '00';
+                hoursElement.textContent = '00';
+                minutesElement.textContent = '00';
+
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+
+            const hours = Math.floor(
+                (distance % (1000 * 60 * 60 * 24)) /
+                (1000 * 60 * 60)
+            );
+
+            const minutes = Math.floor(
+                (distance % (1000 * 60 * 60)) /
+                (1000 * 60)
+            );
+
+            daysElement.textContent = String(days).padStart(2, '0');
+            hoursElement.textContent = String(hours).padStart(2, '0');
+            minutesElement.textContent = String(minutes).padStart(2, '0');
+        }
+
+        updateCountdown();
+
+        setInterval(updateCountdown, 60000);
+    });
+
+});
     </script>
 @endsection

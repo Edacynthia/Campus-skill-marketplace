@@ -184,7 +184,7 @@
                                     ->where(function ($query) {
                                         $query
                                             ->where(function ($q) {
-                                                $q->where('status', 'confirmed')->whereNull('client_confirmed_at');
+                                                $q->where('status', 'completed_waiting_payment')->where('payment_status', 'unpaid');
                                             })
                                             ->orWhere(function ($q) {
                                                 $q->where('status', 'done')->whereDoesntHave('ratings', function (

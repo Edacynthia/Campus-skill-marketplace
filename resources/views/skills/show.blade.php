@@ -30,6 +30,30 @@
         </div>
     @endif
 
+                <!-- Reviews Section -->
+@php
+    $skillReviews = \App\Models\Rating::with('reviewer')
+    ->where('type', 'client_to_provider')
+    ->whereHas('booking', function ($query) use ($skill) {
+        $query->where('skill_id', $skill->id);
+    })
+    ->latest()
+    ->take(3)
+    ->get();
+
+   $totalReviews = \App\Models\Rating::where('type', 'client_to_provider')
+    ->whereHas('booking', function ($query) use ($skill) {
+        $query->where('skill_id', $skill->id);
+    })
+    ->count();
+
+  $averageRating = \App\Models\Rating::where('type', 'client_to_provider')
+    ->whereHas('booking', function ($query) use ($skill) {
+        $query->where('skill_id', $skill->id);
+    })
+    ->avg('rating');
+@endphp
+
     <!-- Skill Details -->
     <div class="max-w-7xl mx-auto px-6 py-12">
         <div class="grid lg:grid-cols-3 gap-12">
@@ -45,8 +69,12 @@
                         </span>
                         <div class="flex items-center gap-1 text-sm">
                             <i class="fa-solid fa-star text-yellow-400"></i>
-                            <span class="font-semibold">{{ $skill->rating ?: '5.0' }}</span>
-                            <span class="text-gray-400">({{ $skill->reviews_count ?? 0 }} reviews)</span>
+                            <span class="font-semibold">
+                                {{ $averageRating ? number_format($averageRating, 1) : '0.0' }}
+                            </span>
+                            <span class="text-gray-400">
+                                ({{ $totalReviews }} reviews)
+                            </span>
                         </div>
                     </div>
                     
@@ -99,28 +127,6 @@
                     </div>
                     <p class="text-sm text-gray-500 mt-2">{{ $skill->price_type ?? 'Fixed price' }}</p>
                 </div>
-
-               
-                <!-- Reviews Section -->
-@php
-    $skillReviews = \App\Models\Rating::with('reviewer')
-        ->whereHas('booking', function ($query) use ($skill) {
-            $query->where('skill_id', $skill->id);
-        })
-        ->latest()
-        ->take(3)
-        ->get();
-
-    $totalReviews = \App\Models\Rating::whereHas('booking', function ($query) use ($skill) {
-            $query->where('skill_id', $skill->id);
-        })
-        ->count();
-
-    $averageRating = \App\Models\Rating::whereHas('booking', function ($query) use ($skill) {
-            $query->where('skill_id', $skill->id);
-        })
-        ->avg('rating');
-@endphp
 
 <div>
     <div class="flex items-center justify-between mb-6">
@@ -266,28 +272,30 @@
                                 Waiting for provider confirmation
                             </div>
                        @elseif($activeBooking->status === 'confirmed')
-    <div class="space-y-3">
-        <div class="w-full px-6 py-3 bg-emerald-100 text-emerald-700 font-semibold rounded-xl border border-emerald-200 text-center">
-            <i class="fa-solid fa-check-circle mr-2"></i>
-            Booking Confirmed
-        </div>
-        @if($activeBooking->client_confirmed_at)
-            {{-- Client already confirmed, waiting for provider --}}
-            <div class="w-full px-6 py-3 bg-amber-50 text-amber-700 font-semibold rounded-xl border border-amber-200 text-center">
-                <i class="fa-solid fa-clock mr-2"></i>
-                You confirmed — waiting for provider to confirm
-            </div>
-        @else
-            <button onclick="clientConfirmBooking({{ $activeBooking->id }})" class="w-full px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-all">
-                <i class="fa-solid fa-check mr-2"></i>
-                Mark as Done — Service Received
-            </button>
-        @endif
+    <div class="w-full px-6 py-3 bg-blue-100 text-blue-700 font-semibold rounded-xl border border-blue-200 text-center">
+        Booking confirmed. Waiting for provider to start work.
     </div>
-                      @elseif($activeBooking->status === 'done')
-    <div class="w-full px-6 py-3 bg-green-100 text-green-700 font-semibold rounded-xl border border-green-200 text-center mb-3">
-        <i class="fa-solid fa-check-double mr-2"></i>
-        Service Completed ✓
+
+@elseif($activeBooking->status === 'in_progress')
+    <div class="w-full px-6 py-3 bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 text-center">
+        Provider is working on your service.
+    </div>
+
+@elseif($activeBooking->status === 'completed_waiting_payment')
+    @if($activeBooking->payment_status === 'unpaid')
+        <button onclick="clientMarkedPaid({{ $activeBooking->id }})"
+                class="w-full px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700">
+            I Have Paid
+        </button>
+    @else
+        <div class="w-full px-6 py-3 bg-amber-50 text-amber-700 font-semibold rounded-xl border border-amber-200 text-center">
+            Waiting for provider to confirm payment.
+        </div>
+    @endif
+
+@elseif($activeBooking->status === 'done')
+    <div class="w-full px-6 py-3 bg-green-100 text-green-700 font-semibold rounded-xl border border-green-200 text-center">
+        Service Completed & Payment Confirmed
     </div>
     @php
         $hasRated = \App\Models\Rating::where('booking_id', $activeBooking->id)
@@ -407,7 +415,7 @@
                                 <div class="pt-2">
                                     <a href="{{ route('bookings.skills') }}"
                                        class="block w-full text-center px-4 py-2 bg-[#1e3a8a] text-white text-sm rounded-lg hover:bg-[#0f2b5e] transition-all">
-                                        View All Bookings
+                                        Manage Booking Progress
                                     </a>
                                 </div>
                             </div>
@@ -635,87 +643,6 @@ function declineBooking(bookingId) {
     .catch(() => alert('Error declining booking'));
 }
 
-function clientConfirmBooking(bookingId) {
-    if (!confirm('Mark this service as received and done?')) return;
-
-    const btn = document.querySelector(`[onclick="clientConfirmBooking(${bookingId})"]`);
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Processing...';
-    }
-
-    fetch(`/bookings/${bookingId}/client-confirm`, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            // Replace the button area with a clear message immediately
-            const buttonContainer = btn ? btn.closest('.space-y-3') : null;
-            if (buttonContainer) {
-                if (data.bothConfirmed) {
-                    // Both confirmed — service is fully done
-                    buttonContainer.innerHTML = `
-                        <div class="w-full px-6 py-3 bg-green-100 text-green-700 font-semibold rounded-xl border border-green-200 text-center">
-                            <i class="fa-solid fa-check-double mr-2"></i>
-                            Service Completed ✓
-                        </div>
-                        <div class="p-4 bg-white border border-gray-200 rounded-xl mt-3">
-                            <p class="text-sm text-gray-600 text-center mb-2">Page is refreshing to load your rating form...</p>
-                        </div>
-                    `;
-                } else {
-                    // Client confirmed, waiting for provider
-                    buttonContainer.innerHTML = `
-                        <div class="w-full px-6 py-3 bg-emerald-100 text-emerald-700 font-semibold rounded-xl border border-emerald-200 text-center">
-                            <i class="fa-solid fa-check-circle mr-2"></i>
-                            Booking Confirmed
-                        </div>
-                        <div class="w-full px-6 py-3 bg-amber-50 text-amber-700 font-semibold rounded-xl border border-amber-200 text-center">
-                            <i class="fa-solid fa-clock mr-2"></i>
-                            You confirmed — waiting for provider to confirm
-                        </div>
-                    `;
-                }
-            }
-            // Reload after 2.5 seconds so the message is visible
-            setTimeout(() => location.reload(), 2500);
-        } else {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Mark as Done — Service Received';
-            }
-            alert(data.message || 'Error confirming');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        // The browser extension error fires here even on success
-        // So reload anyway since we know 200 means it worked
-        setTimeout(() => location.reload(), 1000);
-    });
-}
-
-function providerConfirmBooking(bookingId) {
-    if (!confirm('Mark this service as delivered and done?')) return;
-    fetch(`/bookings/${bookingId}/provider-confirm`, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) location.reload();
-        else alert(data.message || 'Error confirming');
-    })
-    .catch(() => alert('Error confirming'));
-}
 
 // ====================== INLINE STAR RATING ======================
 function setBookingInlineRating(bookingId, rating) {
@@ -726,6 +653,24 @@ function setBookingInlineRating(bookingId, rating) {
         star.classList.remove('text-yellow-400', 'text-gray-300');
         star.classList.add(index < rating ? 'text-yellow-400' : 'text-gray-300');
     });
+}
+
+function clientMarkedPaid(bookingId) {
+    if (!confirm('Confirm that you have paid the provider?')) return;
+
+    fetch(`/bookings/${bookingId}/client-paid`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) location.reload();
+        else alert(data.message || 'Error confirming payment');
+    })
+    .catch(() => alert('Error confirming payment'));
 }
 
 function submitBookingInlineRating(bookingId) {

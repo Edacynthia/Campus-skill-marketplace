@@ -14,18 +14,31 @@ class MessageController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
-        // Get all messages for the user (both sent and received)
+
         $messages = Message::with(['sender', 'receiver', 'skill', 'job'])
-            ->where(function($query) use ($user) {
+            ->where(function ($query) use ($user) {
                 $query->where('sender_id', $user->id)
                       ->orWhere('receiver_id', $user->id);
             })
-            ->notArchived()
+            ->where('is_archived', false)
             ->latest()
             ->paginate(20);
-        
+
         return view('messages.index', compact('messages'));
+    }
+
+    public function archived()
+    {
+        $messages = Message::with(['sender', 'receiver', 'skill', 'job'])
+            ->where(function ($query) {
+                $query->where('sender_id', Auth::id())
+                      ->orWhere('receiver_id', Auth::id());
+            })
+            ->where('is_archived', true)
+            ->latest()
+            ->paginate(20);
+
+        return view('messages.archived', compact('messages'));
     }
 
     public function store(Request $request)
@@ -39,24 +52,24 @@ class MessageController extends Controller
 
         $sender = Auth::user();
         $receiverId = $request->receiver_id;
-        
-        // Prevent users from messaging themselves
+
         if ($sender->id == $receiverId) {
             return back()->with('error', 'You cannot send a message to yourself.');
         }
 
-        // Check if skill or job belongs to the receiver
         if ($request->skill_id) {
-            $skill = Skill::find($request->skill_id);
+            $skill = Skill::findOrFail($request->skill_id);
+
             if ($skill->user_id != $receiverId) {
-                return back()->with('error', 'This skill does not belong to the specified user.');
+                return back()->with('error', 'This skill does not belong to the selected user.');
             }
         }
 
         if ($request->job_id) {
-            $job = Job::find($request->job_id);
+            $job = Job::findOrFail($request->job_id);
+
             if ($job->employer_id != $receiverId) {
-                return back()->with('error', 'This job does not belong to the specified user.');
+                return back()->with('error', 'This job does not belong to the selected user.');
             }
         }
 
@@ -68,39 +81,26 @@ class MessageController extends Controller
                 'job_id' => $request->job_id,
                 'message' => $request->message,
                 'status' => 'sent',
+                'is_archived' => false,
             ]);
 
-            // Create notification for message receiver
-            $notificationTitle = 'New Message Received';
-            $notificationMessage = "You have a new message from {$sender->fullName()}";
-            $notificationUrl = route('messages.index');
-            
             Notification::createNotification(
                 $receiverId,
                 'message_received',
-                $notificationTitle,
-                $notificationMessage,
-                $notificationUrl
+                'New Message Received',
+                "You have a new message from {$sender->fullName()}",
+                route('messages.index')
             );
 
-            // Log the message creation for debugging
-            \Log::info('Message created successfully', [
-                'message_id' => $message->id,
-                'sender_id' => $sender->id,
-                'receiver_id' => $receiverId,
-                'skill_id' => $request->skill_id,
-                'job_id' => $request->job_id,
-            ]);
+            return back()->with('success', 'Message sent successfully.');
 
-            // Redirect back with success message
-            return redirect()->back()->with('success', 'Message sent successfully!');
         } catch (\Exception $e) {
             \Log::error('Failed to create message', [
                 'error' => $e->getMessage(),
                 'sender_id' => $sender->id,
                 'receiver_id' => $receiverId,
             ]);
-            
+
             return back()->with('error', 'Failed to send message. Please try again.');
         }
     }
@@ -112,10 +112,12 @@ class MessageController extends Controller
             ->firstOrFail();
 
         if ($message->status === 'sent') {
-            $message->update(['status' => 'read']);
+            $message->update([
+                'status' => 'read'
+            ]);
         }
 
-        return back();
+        return back()->with('success', 'Message marked as read.');
     }
 
     public function reply(Request $request, $id)
@@ -125,47 +127,84 @@ class MessageController extends Controller
         ]);
 
         $originalMessage = Message::where('id', $id)
-            ->where('receiver_id', Auth::id())
-            ->firstOrFail();
-
-        // Create reply message
-        Message::create([
-            'sender_id' => Auth::id(),
-            'receiver_id' => $originalMessage->sender_id,
-            'skill_id' => $originalMessage->skill_id,
-            'job_id' => $originalMessage->job_id,
-            'message' => $request->reply,
-            'status' => 'sent',
-        ]);
-
-        // Mark original message as replied
-        $originalMessage->update(['status' => 'replied']);
-
-        return back()->with('success', 'Reply sent successfully!');
-    }
-
-    public function archive($id)
-    {
-        $message = Message::where('id', $id)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('sender_id', Auth::id())
                       ->orWhere('receiver_id', Auth::id());
             })
             ->firstOrFail();
 
-        $message->update(['is_archived' => true]);
+        $receiverId = $originalMessage->sender_id == Auth::id()
+            ? $originalMessage->receiver_id
+            : $originalMessage->sender_id;
 
-        return back()->with('success', 'Message archived successfully!');
+        Message::create([
+            'sender_id' => Auth::id(),
+            'receiver_id' => $receiverId,
+            'skill_id' => $originalMessage->skill_id,
+            'job_id' => $originalMessage->job_id,
+            'message' => $request->reply,
+            'status' => 'sent',
+            'is_archived' => false,
+        ]);
+
+        $originalMessage->update([
+            'status' => 'replied'
+        ]);
+
+        Notification::createNotification(
+            $receiverId,
+            'message_received',
+            'New Reply Received',
+            Auth::user()->fullName() . ' replied to your message.',
+            route('messages.index')
+        );
+
+        return back()->with('success', 'Reply sent successfully.');
+    }
+
+    public function archive($id)
+    {
+        $message = Message::where('id', $id)
+            ->where(function ($query) {
+                $query->where('sender_id', Auth::id())
+                      ->orWhere('receiver_id', Auth::id());
+            })
+            ->firstOrFail();
+
+        $message->update([
+            'is_archived' => true
+        ]);
+
+        return back()->with('success', 'Message archived successfully.');
+    }
+
+    public function unarchive($id)
+    {
+        $message = Message::where('id', $id)
+            ->where(function ($query) {
+                $query->where('sender_id', Auth::id())
+                      ->orWhere('receiver_id', Auth::id());
+            })
+            ->firstOrFail();
+
+        $message->update([
+            'is_archived' => false
+        ]);
+
+        return back()->with('success', 'Message restored successfully.');
     }
 
     public function destroy($id)
     {
         $message = Message::where('id', $id)
-            ->where('sender_id', Auth::id())
+            ->where(function ($query) {
+                $query->where('sender_id', Auth::id())
+                      ->orWhere('receiver_id', Auth::id());
+            })
             ->firstOrFail();
 
         $message->delete();
 
-        return back()->with('success', 'Message deleted successfully!');
+        return back()->with('success', 'Message deleted successfully.');
     }
 }

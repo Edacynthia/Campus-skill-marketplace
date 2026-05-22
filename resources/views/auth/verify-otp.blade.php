@@ -62,26 +62,20 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">OTP CODE</label>
 
-                    <div class="relative">
-                        <input type="text"
-                               name="otp"
-                               value="{{ old('otp') }}"
-                               required
-                               maxlength="6"
-                               inputmode="numeric"
-                               autocomplete="one-time-code"
-                               placeholder="Enter 6-digit code"
-                               class="w-full px-4 py-4 border rounded-2xl text-center text-2xl font-mono tracking-widest focus:outline-none focus:ring-2
-                               @error('otp')
-                                   border-red-400 focus:border-red-500 focus:ring-red-200
-                               @else
-                                   border-gray-300 focus:border-[#1e3a8a] focus:ring-[#1e3a8a]/20
-                               @enderror">
+                    <div class="flex justify-center gap-3">
 
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <i class="fa-solid fa-key text-gray-400"></i>
-                        </div>
-                    </div>
+    @for($i = 0; $i < 6; $i++)
+        <input type="text"
+               maxlength="1"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               class="otp-input w-14 h-16 text-center text-2xl font-bold border-2 border-gray-300 rounded-2xl focus:border-[#1e3a8a] focus:ring-4 focus:ring-[#1e3a8a]/10 outline-none transition-all"
+               data-index="{{ $i }}">
+    @endfor
+
+</div>
+
+<input type="hidden" name="otp" id="otp-hidden-input">
 
                     @error('otp')
                         <p class="text-red-600 text-sm mt-2">{{ $message }}</p>
@@ -119,13 +113,17 @@
 </div>
 
 <style>
-input[type="text"][name="otp"] {
-    letter-spacing: 0.5em;
-    font-weight: 600;
+.otp-input {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
 }
 
-input[type="text"][name="otp"]:focus {
-    letter-spacing: 0.3em;
+.otp-input:focus {
+    transform: translateY(-2px);
+}
+
+.otp-input.filled {
+    border-color: #1e3a8a;
+    background-color: #eff6ff;
 }
 </style>
 
@@ -147,5 +145,77 @@ document.querySelectorAll('.auth-submit-form').forEach(form => {
         `;
     });
 });
+
+const otpInputs = document.querySelectorAll('.otp-input');
+const hiddenOtpInput = document.getElementById('otp-hidden-input');
+
+otpInputs.forEach((input, index) => {
+
+    input.addEventListener('input', (e) => {
+
+        input.value = input.value.replace(/[^0-9]/g, '');
+
+        if (input.value !== '') {
+            input.classList.add('filled');
+
+            if (index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
+            }
+        } else {
+            input.classList.remove('filled');
+        }
+
+        updateHiddenOTP();
+    });
+
+    input.addEventListener('keydown', (e) => {
+
+        if (e.key === 'Backspace' && input.value === '') {
+
+            if (index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        }
+    });
+
+    input.addEventListener('paste', (e) => {
+
+        e.preventDefault();
+
+        const pastedData = (e.clipboardData || window.clipboardData)
+            .getData('text')
+            .replace(/\D/g, '')
+            .slice(0, 6);
+
+        pastedData.split('').forEach((digit, i) => {
+
+            if (otpInputs[i]) {
+                otpInputs[i].value = digit;
+                otpInputs[i].classList.add('filled');
+            }
+        });
+
+        updateHiddenOTP();
+
+        const nextEmpty = [...otpInputs].find(input => input.value === '');
+
+        if (nextEmpty) {
+            nextEmpty.focus();
+        }
+    });
+
+});
+
+function updateHiddenOTP() {
+
+    let otp = '';
+
+    otpInputs.forEach(input => {
+        otp += input.value;
+    });
+
+    hiddenOtpInput.value = otp;
+}
+
 </script>
 @endsection

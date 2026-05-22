@@ -97,77 +97,107 @@ class BookingController extends Controller
         ]);
     }
 
-    public function clientConfirm($bookingId)
+    public function confirmPaymentSent($bookingId)
     {
         if (!auth()->check()) {
-            return response()->json(['success' => false, 'message' => 'Please sign in'], 401);
+            return response()->json([
+                'success' => false,
+                'message' => 'Please sign in'
+            ], 401);
         }
 
         $booking = Booking::findOrFail($bookingId);
 
-        // Verify authenticated user is the client
+        // Only client/employer can confirm payment sent
         if ($booking->client_id !== auth()->id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized action'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action'
+            ], 403);
         }
 
-        // Verify booking status is confirmed
-        if ($booking->status !== 'confirmed') {
-            return response()->json(['success' => false, 'message' => 'Can only confirm confirmed bookings'], 400);
+        // Booking must be completed first
+        if ($booking->status !== 'done') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking must be completed first'
+            ], 400);
         }
 
-        // Set client_confirmed_at
-        $booking->update(['client_confirmed_at' => now()]);
-
-        // Check if both sides have confirmed
-        $bothConfirmed = $booking->bothConfirmed();
-        if ($bothConfirmed) {
-            $booking->update([
-                'status' => 'done',
-                'completed_at' => now()
-            ]);
+        // Prevent duplicate confirmation
+        if ($booking->payment_status !== 'unpaid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment already processed'
+            ], 400);
         }
+
+        $booking->update([
+            'payment_status' => 'paid_by_employer',
+            'payment_confirmed_at' => now(),
+            'payment_confirmed_by' => auth()->id(),
+        ]);
+
+        // Notify provider
+        Notification::createNotification(
+            $booking->provider_id,
+            'payment_sent',
+            'Payment Marked As Sent',
+            auth()->user()->first_name . ' marked payment as sent.',
+            route('bookings.skills')
+        );
 
         return response()->json([
             'success' => true,
-            'message' => $bothConfirmed ? 'Service marked as completed!' : 'Service confirmed, waiting for provider confirmation',
-            'bothConfirmed' => $bothConfirmed
+            'message' => 'Payment marked as sent successfully!'
         ]);
     }
 
-    public function providerConfirm($bookingId)
+    public function confirmPaymentReceived($bookingId)
     {
         if (!auth()->check()) {
-            return response()->json(['success' => false, 'message' => 'Please sign in'], 401);
+            return response()->json([
+                'success' => false,
+                'message' => 'Please sign in'
+            ], 401);
         }
 
         $booking = Booking::findOrFail($bookingId);
 
-        // Verify authenticated user is the provider
+        // Only provider can confirm payment received
         if ($booking->provider_id !== auth()->id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized action'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action'
+            ], 403);
         }
 
-        // Verify booking status is confirmed
-        if ($booking->status !== 'confirmed') {
-            return response()->json(['success' => false, 'message' => 'Can only confirm confirmed bookings'], 400);
+        // Employer must first confirm payment sent
+        if ($booking->payment_status !== 'paid_by_employer') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employer has not confirmed payment yet'
+            ], 400);
         }
 
-        // Set provider_confirmed_at
-        $booking->update(['provider_confirmed_at' => now()]);
+        $booking->update([
+            'payment_status' => 'received_by_provider',
+            'payment_confirmed_at' => now(),
+            'payment_confirmed_by' => auth()->id(),
+        ]);
 
-        // Check if both sides have confirmed
-        $bothConfirmed = $booking->bothConfirmed();
-        if ($bothConfirmed) {
-            $booking->update([
-                'status' => 'done',
-                'completed_at' => now()
-            ]);
-        }
+        // Notify client/employer
+        Notification::createNotification(
+            $booking->client_id,
+            'payment_received',
+            'Payment Confirmed',
+            auth()->user()->first_name . ' confirmed payment receipt.',
+            route('bookings.requests')
+        );
 
         return response()->json([
             'success' => true,
-            'message' => $bothConfirmed ? 'Service marked as completed!' : 'Service confirmed, waiting for client confirmation',
-            'bothConfirmed' => $bothConfirmed
+            'message' => 'Payment confirmed successfully!'
         ]);
     }
 
@@ -206,9 +236,14 @@ class BookingController extends Controller
         $booking = Booking::findOrFail($bookingId);
 
         // Verify booking status is done
-        if ($booking->status !== 'done') {
-            return response()->json(['success' => false, 'message' => 'Can only rate completed bookings'], 400);
-        }
+        // Booking must be completed
+        if ($booking->status !== 'done' || $booking->payment_status !== 'provider_confirmed_received') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Rating is only available after payment has been confirmed by the provider.'
+        ], 400);
+    }
+
 
         // Determine type
         $reviewerId = auth()->id();
@@ -311,4 +346,133 @@ class BookingController extends Controller
 
         return view('bookings.skills', compact('myServiceBookings'));
     }
+
+   public function updateProgress(Request $request, $id)
+{
+    $request->validate([
+        'status' => 'required|in:in_progress,completed_waiting_payment',
+    ]);
+
+    $booking = Booking::findOrFail($id);
+
+    if ($booking->provider_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized action'
+        ], 403);
+    }
+
+    $booking->update([
+        'status' => $request->status,
+        'completed_at' => $request->status === 'completed_waiting_payment'
+            ? now()
+            : $booking->completed_at,
+    ]);
+
+    Notification::createNotification(
+        $booking->client_id,
+        'booking_progress_updated',
+        'Booking Progress Updated',
+        'The provider updated your booking progress.',
+        route('bookings.requests')
+    );
+
+    return response()->json([
+        'success' => true
+    ]);
+}
+
+public function clientMarkedPaid($id)
+{
+    $booking = Booking::findOrFail($id);
+
+    if ($booking->client_id !== auth()->id()) {
+        return response()->json([
+            'success' => false
+        ], 403);
+    }
+
+    $booking->update([
+        'payment_status' => 'client_marked_paid',
+        'client_paid_at' => now(),
+    ]);
+
+    Notification::createNotification(
+        $booking->provider_id,
+        'client_marked_paid',
+        'Client Marked Payment As Sent',
+        auth()->user()->first_name . ' marked payment as sent.',
+        route('bookings.skills')
+    );
+
+    return response()->json([
+        'success' => true
+    ]);
+}
+
+public function providerReceivedPayment($id)
+{
+    $booking = Booking::findOrFail($id);
+
+    if ($booking->provider_id !== auth()->id()) {
+        return response()->json([
+            'success' => false
+        ], 403);
+    }
+
+    $booking->update([
+        'status' => 'done',
+        'payment_status' => 'provider_confirmed_received',
+        'provider_payment_confirmed_at' => now(),
+        'payment_resolved_at' => now(),
+    ]);
+
+    return response()->json([
+        'success' => true
+    ]);
+}
+
+public function providerPaymentNotReceived(Request $request, $id)
+{
+    $request->validate([
+        'reason' => 'required|string|max:1000',
+    ]);
+
+    $booking = Booking::findOrFail($id);
+
+    if ($booking->provider_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized action'
+        ], 403);
+    }
+
+    if ($booking->payment_status !== 'client_marked_paid') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Client has not marked payment as sent yet.'
+        ], 400);
+    }
+
+    $booking->update([
+        // Do NOT change main status to disputed
+        'status' => 'completed_waiting_payment',
+        'payment_status' => 'payment_disputed',
+        'payment_dispute_reason' => $request->reason,
+        'payment_disputed_at' => now(),
+    ]);
+
+    Notification::notifyAdmins(
+        'payment_dispute',
+        'Payment Dispute',
+        'A provider reported payment was not received.',
+        route('admin.dashboard')
+    );
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Payment dispute submitted. Admin has been notified.'
+    ]);
+}
+
 }
