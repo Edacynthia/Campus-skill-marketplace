@@ -31,6 +31,16 @@ return new class extends Migration
             $table->string('passport_photo')->nullable();
             $table->boolean('is_approved')->default(false);
 
+            $table->enum('status', [
+                'active',
+                'suspended',
+                'banned'
+            ])->default('active');
+
+            $table->text('ban_reason')->nullable();
+
+            $table->timestamp('suspended_until')->nullable();
+
             // OTP Verification
             $table->boolean('otp_verified')->default(false);
             $table->string('otp_code')->nullable();

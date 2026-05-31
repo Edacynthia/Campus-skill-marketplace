@@ -51,6 +51,12 @@
             <p class="text-sm text-gray-500 mt-2">Coming soon.</p>
         </div>
 
+        <a href="{{ route('admin.disputes') }}"
+        class="block bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+            <h3 class="text-lg font-bold text-gray-800">Reports & Disputes</h3>
+            <p class="text-sm text-gray-500 mt-2">Review payment complaints and Reports.</p>
+        </a>
+
         <div class="bg-white p-6 rounded-xl shadow opacity-60">
             <h3 class="text-lg font-bold text-gray-800">Skills Management</h3>
             <p class="text-sm text-gray-500 mt-2">Coming soon.</p>
@@ -59,11 +65,6 @@
         <div class="bg-white p-6 rounded-xl shadow opacity-60">
             <h3 class="text-lg font-bold text-gray-800">Bookings</h3>
             <p class="text-sm text-gray-500 mt-2">Coming soon.</p>
-        </div>
-
-        <div class="bg-white p-6 rounded-xl shadow opacity-60">
-            <h3 class="text-lg font-bold text-gray-800">Reports & Disputes</h3>
-            <p class="text-sm text-gray-500 mt-2">Coming later.</p>
         </div>
 
     </div>

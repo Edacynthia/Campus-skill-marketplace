@@ -10,8 +10,8 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobProgressController;
-use App\Http\Controllers\MessageController; 
-use App\Http\Controllers\NotificationController; 
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 
 
@@ -21,7 +21,7 @@ use Illuminate\Http\Request;
 Route::get('/test-mail', function () {
     Mail::raw('Laravel email test is working.', function ($message) {
         $message->to('cynthiaeda70@gmail.com')
-                ->subject('Test Email from Laravel');
+            ->subject('Test Email from Laravel');
     });
 
     return 'Test email sent';
@@ -91,7 +91,7 @@ Route::get('/approval-pending', function () {
 })->name('approval.pending');
 
 // ====================== PROTECTED ROUTES ======================
-Route::middleware(['auth', 'approved'])->group(function () {
+Route::middleware(['auth', 'approved', 'check.status'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Routes
@@ -117,14 +117,14 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::post('/jobs/{id}/apply', [JobController::class, 'apply'])->name('jobs.apply');
     Route::patch('/jobs/{id}/close', [JobController::class, 'close'])->name('jobs.close');
     Route::patch('/jobs/{id}/reopen', [JobController::class, 'reopen'])->name('jobs.reopen');
-    
+
     // Application editing routes
     Route::patch('/applications/{id}', [JobController::class, 'editApplication'])->name('applications.edit');
     Route::delete('/applications/{id}', [JobController::class, 'withdrawApplication'])->name('applications.withdraw');
 
     // Application progress routes
     Route::post('/applications/{id}/accept', [JobProgressController::class, 'accept'])->name('applications.accept');
-    Route::post('/applications/{id}/reject', [JobProgressController::class, 'reject'])->name('applications.reject'); 
+    Route::post('/applications/{id}/reject', [JobProgressController::class, 'reject'])->name('applications.reject');
     Route::post('/applications/{id}/start', [JobProgressController::class, 'startWork'])->name('applications.start');
     Route::post('/applications/{id}/complete', [JobProgressController::class, 'markComplete'])->name('applications.complete');
     Route::post('/applications/{id}/revision', [JobProgressController::class, 'requestRevision'])->name('applications.revision');
@@ -145,26 +145,20 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::post('/skills/{skillId}/book', [BookingController::class, 'store'])->name('bookings.store');
     Route::post('/bookings/{id}/confirm', [BookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('/bookings/{id}/payment-sent', [BookingController::class, 'confirmPaymentSent'])->name('bookings.payment.sent');
-    Route::post('/bookings/{id}/payment-received', [BookingController::class, 'confirmPaymentReceived'])->name('bookings.payment.received');
     Route::post('/bookings/{id}/decline', [BookingController::class, 'decline'])->name('bookings.decline');
     Route::post('/bookings/{id}/rate', [BookingController::class, 'submitRating'])->name('bookings.rate');
-   Route::post('/bookings/{id}/update-progress', [BookingController::class, 'updateProgress'])
-    ->name('bookings.updateProgress');
-
-Route::post('/bookings/{id}/client-paid', [BookingController::class, 'clientMarkedPaid'])
-    ->name('bookings.clientPaid');
-
-Route::post('/bookings/{id}/payment-received', [BookingController::class, 'providerReceivedPayment'])
-    ->name('bookings.paymentReceived');
-
-Route::post('/bookings/{id}/payment-not-received', [BookingController::class, 'providerPaymentNotReceived'])
-    ->name('bookings.paymentNotReceived');
-
+    Route::post('/bookings/{id}/update-progress', [BookingController::class, 'updateProgress'])->name('bookings.updateProgress');
+    Route::post('/bookings/{id}/client-paid', [BookingController::class, 'clientMarkedPaid'])->name('bookings.clientPaid');
+    Route::post('/bookings/{id}/payment-received', [BookingController::class, 'providerReceivedPayment'])->name('bookings.paymentReceived');
+    Route::post('/bookings/{id}/payment-not-received', [BookingController::class, 'providerPaymentNotReceived'])->name('bookings.paymentNotReceived');
+    // Payment Dispute Routes
+    Route::get('/bookings/{booking}/dispute', [BookingController::class, 'showDispute'])->name('bookings.dispute.show');
+    Route::post('/bookings/{booking}/dispute-response', [BookingController::class, 'submitDisputeResponse'])->name('bookings.dispute.response');
     // Job Route::middleware(['auth'])->group(function () {
 });
 
 // ====================== MESSAGING ROUTES ======================
-Route::middleware(['auth', 'approved'])->group(function () {
+Route::middleware(['auth', 'approved', 'check.status'])->group(function () {
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::post('/messages/{id}/read', [MessageController::class, 'markAsRead'])->name('messages.read');
@@ -172,13 +166,13 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::post('/messages/{id}/archive', [MessageController::class, 'archive'])->name('messages.archive');
     Route::delete('/messages/{id}', [MessageController::class, 'destroy'])->name('messages.destroy');
     Route::get('/messages/archived', [MessageController::class, 'archived'])
-    ->name('messages.archived');
+        ->name('messages.archived');
     Route::post('/messages/{id}/unarchive', [MessageController::class, 'unarchive'])
-    ->name('messages.unarchive');
+        ->name('messages.unarchive');
 });
 
 // ====================== NOTIFICATION ROUTES ======================
-Route::middleware(['auth', 'approved'])->group(function () {
+Route::middleware(['auth', 'approved', 'check.status'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
@@ -194,8 +188,21 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/users/{user}/reject', [AdminUserApprovalController::class, 'reject'])->name('users.reject');
     Route::get('/users/all-approvals', [AdminUserApprovalController::class, 'index'])->name('users.all');
     Route::get('/admin/users', [AdminController::class, 'users'])->name('users');
-    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/disputes', [AdminController::class, 'disputes'])->name('disputes');
+    Route::post('/users/{user}/suspend', [AdminController::class, 'suspendUser'])->name('users.suspend');
+    Route::post('/users/{user}/ban', [AdminController::class, 'banUser'])->name('users.ban');
+    Route::post('/users/{user}/activate', [AdminController::class, 'activateUser'])->name('users.activate');
+    Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
+    Route::get('/disputes', [AdminController::class, 'disputes'])->name('disputes');
 
+    Route::post('/disputes/{booking}/warn-client', [AdminController::class, 'warnClient'])->name('disputes.warnClient');
+
+    Route::post('/disputes/{booking}/request-proof', [AdminController::class, 'requestPaymentProof'])->name('disputes.requestProof');
+
+    Route::post('/disputes/{booking}/resolve', [AdminController::class, 'resolveDispute'])->name('disputes.resolve');
+
+    Route::post('/disputes/{booking}/dismiss', [AdminController::class, 'dismissDispute'])->name('disputes.dismiss');
 });
 
 // ====================== WILDCARD ROUTES LAST ======================

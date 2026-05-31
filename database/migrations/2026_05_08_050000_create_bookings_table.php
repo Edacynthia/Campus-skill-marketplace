@@ -30,7 +30,8 @@ return new class extends Migration
                 'in_progress',
                 'completed_waiting_payment',
                 'done',
-                'disputed'
+                'disputed',
+                'declined'
             ])->default('interested');
 
             /*

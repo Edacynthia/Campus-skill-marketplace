@@ -16,10 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
-         $middleware->alias([
+        $middleware->alias([
         'auth' => \App\Http\Middleware\Authenticate::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'approved' => \App\Http\Middleware\ApprovalMiddleware::class,
+        'check.status' => \App\Http\Middleware\CheckUserStatus::class,
     ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

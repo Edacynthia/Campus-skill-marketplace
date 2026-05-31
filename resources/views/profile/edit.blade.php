@@ -11,7 +11,7 @@
                 <p class="text-gray-500 mt-1">Update your personal information and profile photo.</p>
             </div>
 
-            <a href="{{ route('dashboard') }}"
+            <a href="{{ auth()->user()->role === 'admin' ? route('admin.dashboard') : route('dashboard') }}"
                class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-100 transition">
                 <i class="fa-solid fa-arrow-left"></i>
                 Back to Dashboard

@@ -128,6 +128,22 @@ class OTPController extends Controller
 
         $user = Auth::user();
 
+        if ($user->status === 'banned') {
+        Auth::logout();
+
+        return redirect()
+            ->route('login')
+            ->with('error', 'Your account has been banned. Please contact admin.');
+    }
+
+    if ($user->status === 'suspended') {
+        Auth::logout();
+
+        return redirect()
+            ->route('login')
+            ->with('error', 'Your account has been suspended temporarily.');
+    }
+
         if (!$user->hasUniversityEmail() && !$user->isApproved()) {
             Auth::logout();
             $request->session()->invalidate();

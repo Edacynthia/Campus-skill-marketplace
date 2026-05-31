@@ -244,13 +244,13 @@
                 <!-- Booking Actions -->
                 @if(auth()->check())
                     @php
-                        $activeBooking = auth()->check() && auth()->id() != $skill->user_id 
-                            ? \App\Models\Booking::where('skill_id', $skill->id)
-                                ->where('client_id', auth()->id())
-                                ->where('status', '!=', 'done')
-                                ->first()
-                            : null;
-                        $mySkillBookings = auth()->id() == $skill->user_id 
+                       $activeBooking = auth()->check() && auth()->id() != $skill->user_id 
+                        ? \App\Models\Booking::where('skill_id', $skill->id)
+                            ->where('client_id', auth()->id())
+                            ->whereNotIn('status', ['done', 'declined'])
+                            ->first()
+                        : null;
+                                            $mySkillBookings = auth()->id() == $skill->user_id 
                             ? \App\Models\Booking::where('skill_id', $skill->id)
                                 ->with('client')
                                 ->latest()

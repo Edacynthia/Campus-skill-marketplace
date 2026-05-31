@@ -107,21 +107,40 @@
                                 View
                             </a>
 
-                                <button disabled
-                                        class="px-3 py-1 bg-gray-300 text-gray-600 rounded-lg text-xs cursor-not-allowed">
-                                    Suspend
-                                </button>
+                              @if(!$user->status || $user->status === 'active')
+    <form action="{{ route('admin.users.suspend', $user) }}" method="POST">
+        @csrf
+        <button class="px-3 py-1 bg-yellow-500 text-white rounded-lg text-xs">
+            Suspend
+        </button>
+    </form>
 
-                                <button disabled
-                                        class="px-3 py-1 bg-gray-300 text-gray-600 rounded-lg text-xs cursor-not-allowed">
-                                    Reset OTP
-                                </button>
+    <form action="{{ route('admin.users.ban', $user) }}" method="POST">
+        @csrf
+        <button class="px-3 py-1 bg-red-700 text-white rounded-lg text-xs">
+            Ban
+        </button>
+    </form>
+@else
+   <form action="{{ route('admin.users.activate', $user) }}" method="POST">
+    @csrf
 
-                                <button disabled
-                                        class="px-3 py-1 bg-gray-300 text-gray-600 rounded-lg text-xs cursor-not-allowed">
-                                    Delete
-                                </button>
+    <button type="submit"
+            class="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700">
+        Activate
+    </button>
+</form>
+@endif
 
+<form action="{{ route('admin.users.delete', $user) }}" method="POST"
+      onsubmit="return confirm('Delete this user permanently?')">
+    @csrf
+    @method('DELETE')
+
+    <button class="px-3 py-1 bg-red-600 text-white rounded-lg text-xs">
+        Delete
+    </button>
+</form>
                             </div>
                         </td>
                         </tr>

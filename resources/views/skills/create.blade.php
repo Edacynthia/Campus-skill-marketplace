@@ -11,16 +11,15 @@
 
             <!-- Form -->
             <div class="bg-white rounded-3xl shadow-sm p-8">
-                <form method="POST" action="{{ route('skills.store') }}" class="space-y-6">
+                <form method="POST" action="{{ route('skills.store') }}" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
                     <!-- Skill Title -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Skill Title *</label>
                         <input type="text" name="title" required
-                               placeholder="e.g., Web Development, Math Tutoring, Graphic Design"
-                               value="{{ old('title') }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
+                            placeholder="e.g., Web Development, Math Tutoring, Graphic Design" value="{{ old('title') }}"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
                         @error('title')
                             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                         @enderror
@@ -30,8 +29,8 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
                         <textarea name="description" rows="6" required
-                                  placeholder="Describe your skill, experience level, what you can help with, and any specializations..."
-                                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">{{ old('description') }}</textarea>
+                            placeholder="Describe your skill, experience level, what you can help with, and any specializations..."
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">{{ old('description') }}</textarea>
                         @error('description')
                             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                         @enderror
@@ -42,15 +41,20 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                             <select name="category" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
                                 <option value="">Select category</option>
-                                <option value="academic" {{ old('category') == 'academic' ? 'selected' : '' }}>Academic</option>
-                                <option value="technical" {{ old('category') == 'technical' ? 'selected' : '' }}>Technical</option>
-                                <option value="creative" {{ old('category') == 'creative' ? 'selected' : '' }}>Creative</option>
-                                <option value="language" {{ old('category') == 'language' ? 'selected' : '' }}>Language</option>
+                                <option value="academic" {{ old('category') == 'academic' ? 'selected' : '' }}>Academic
+                                </option>
+                                <option value="technical" {{ old('category') == 'technical' ? 'selected' : '' }}>Technical
+                                </option>
+                                <option value="creative" {{ old('category') == 'creative' ? 'selected' : '' }}>Creative
+                                </option>
+                                <option value="language" {{ old('category') == 'language' ? 'selected' : '' }}>Language
+                                </option>
                                 <option value="music" {{ old('category') == 'music' ? 'selected' : '' }}>Music</option>
                                 <option value="sports" {{ old('category') == 'sports' ? 'selected' : '' }}>Sports</option>
-                                <option value="business" {{ old('category') == 'business' ? 'selected' : '' }}>Business</option>
+                                <option value="business" {{ old('category') == 'business' ? 'selected' : '' }}>Business
+                                </option>
                                 <option value="other" {{ old('category') == 'other' ? 'selected' : '' }}>Other</option>
                             </select>
                             @error('category')
@@ -61,10 +65,9 @@
                         <!-- Price -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Price (₦) *</label>
-                            <input type="number" name="price" required min="0" step="100"
-                                   placeholder="5000"
-                                   value="{{ old('price') }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
+                            <input type="number" name="price" required min="0" step="1" placeholder="5000"
+                                value="{{ old('price') }}"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
                             @error('price')
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
@@ -74,15 +77,32 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Price Type *</label>
                             <select name="price_type" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
                                 <option value="">Select type</option>
-                                <option value="fixed" {{ old('price_type') == 'fixed' ? 'selected' : '' }}>Fixed Price</option>
-                                <option value="negotiable" {{ old('price_type') == 'negotiable' ? 'selected' : '' }}>Negotiable</option>
+                                <option value="fixed" {{ old('price_type') == 'fixed' ? 'selected' : '' }}>Fixed Price
+                                </option>
+                                <option value="negotiable" {{ old('price_type') == 'negotiable' ? 'selected' : '' }}>
+                                    Negotiable</option>
                             </select>
                             @error('price_type')
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Skill Image</label>
+
+                        <input type="file" name="image" accept="image/*"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] transition-all">
+
+                        <p class="text-xs text-gray-500 mt-1">
+                            Upload an image that represents your skill. JPG, PNG, WEBP. Max 2MB.
+                        </p>
+
+                        @error('image')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <!-- Additional Information -->
@@ -110,12 +130,12 @@
 
                     <!-- Submit Button -->
                     <div class="flex gap-4 pt-6">
-                        <button type="submit" 
-                                class="flex-1 bg-[#1e3a8a] text-white py-4 px-6 rounded-xl font-medium hover:bg-[#0f2b5e] transition-all">
+                        <button type="submit"
+                            class="flex-1 bg-[#1e3a8a] text-white py-4 px-6 rounded-xl font-medium hover:bg-[#0f2b5e] transition-all">
                             Post Skill
                         </button>
-                        <a href="{{ route('dashboard') }}" 
-                           class="px-6 py-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all">
+                        <a href="{{ route('dashboard') }}"
+                            class="px-6 py-4 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all">
                             Cancel
                         </a>
                     </div>

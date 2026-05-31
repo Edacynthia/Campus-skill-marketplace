@@ -226,7 +226,7 @@
             <p class="text-gray-600 mb-6">
                 There are no pending user approvals at the moment. All external users have been reviewed.
             </p>
-            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-[#1e3a8a] hover:bg-blue-900 text-white rounded-lg font-medium transition">
+            <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-[#1e3a8a] hover:bg-blue-900 text-white rounded-lg font-medium transition">
                 <i class="fa-solid fa-arrow-left"></i>
                 Back to Dashboard
             </a>

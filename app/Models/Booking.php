@@ -30,12 +30,22 @@ class Booking extends Model
         'payment_disputed_at',
         'payment_resolved_at',
         'completed_at',
+        'payment_dispute_opened_by',
+        'payment_dispute_opened_by_role',
+        'client_payment_response',
+        'client_payment_proof',
+        'admin_dispute_note',
+        'admin_payment_deadline_at',
+        'dispute_status',
     ];
 
     protected $casts = [
         'client_confirmed_at' => 'datetime',
         'provider_confirmed_at' => 'datetime',
         'completed_at' => 'datetime',
+        'payment_disputed_at' => 'datetime',
+        'payment_resolved_at' => 'datetime',
+        'admin_payment_deadline_at' => 'datetime',
     ];
 
     public function skill()
@@ -66,15 +76,23 @@ class Booking extends Model
     public function statusLabel()
     {
         return match($this->status) {
-            'interested' => 'Interested',
+           'interested' => 'Interested',
             'confirmed' => 'Confirmed',
+            'in_progress' => 'In Progress',
+            'completed_waiting_payment' => 'Waiting Payment',
             'done' => 'Completed',
-            default => ucfirst($this->status),
+            'declined' => 'Declined',
+            default => ucfirst(str_replace('_', ' ', $this->status)),
         };
     }
 
     public function paymentConfirmedBy()
     {
         return $this->belongsTo(User::class, 'payment_confirmed_by');
+    }
+
+    public function paymentDisputeOpenedBy()
+    {
+        return $this->belongsTo(User::class, 'payment_dispute_opened_by');
     }
 }

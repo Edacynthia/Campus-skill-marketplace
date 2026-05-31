@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Skill;
 use App\Models\User;
 use App\Models\Notification;
@@ -112,16 +113,24 @@ class SkillController extends Controller
             'category' => 'required|string',
             'price' => 'required|numeric|min:0',
             'price_type' => 'required|in:fixed,negotiable',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
+
+        $imagePath = null;
+
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('skills', 'public');
+        }
         
         $skill = Skill::create([
             'user_id' => auth()->id(),
-            'title' => $request->title,
+            'title' => ucwords(strtolower(trim($request->title))),
             'description' => strip_tags($request->description),
             'category' => $request->category,
             'price' => $request->price,
             'price_type' => $request->price_type,
             'status' => 'active',
+            'image' => $imagePath,
         ]);
 
         $users = User::where('id', '!=', auth()->id())->get();
@@ -159,14 +168,14 @@ class SkillController extends Controller
         ]);
         
         $skill->update([
-            'title' => $request->title,
+            'title' => ucwords(strtolower(trim($request->title))),
             'description' => $request->description,
             'category' => $request->category,
             'price' => $request->price,
             'price_type' => $request->price_type,
         ]);
         
-        return redirect()->route('dashboard')
+        return redirect()->route('skills.mine')
             ->with('success', 'Skill updated successfully!');
     }
     
@@ -175,7 +184,7 @@ class SkillController extends Controller
         $skill = Skill::where('user_id', auth()->id())->findOrFail($id);
         $skill->delete();
         
-        return redirect()->route('dashboard')
+        return redirect()->route('skills.mine')
             ->with('success', 'Skill deleted successfully!');
     }
 

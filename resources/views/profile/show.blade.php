@@ -397,8 +397,8 @@
 
             <!-- Back to Dashboard -->
             <div class="mt-8 text-center">
-                <a href="{{ route('dashboard') }}" 
-                   class="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all">
+                <a href="{{ auth()->user()->dashboardRoute() }}"
+                class="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all">
                     <i class="fa-solid fa-arrow-left"></i>
                     Back to Dashboard
                 </a>

@@ -27,6 +27,9 @@ class User extends Authenticatable
         'otp_code',          // for OTP authentication
         'otp_expires_at',    // for OTP expiration
         'otp_verified',       // for OTP verification status
+        'status',             // active, suspended, banned
+        'ban_reason',         // reason for banning
+        'suspended_until',    // when suspension ends
     ];
 
     protected $hidden = [
@@ -44,6 +47,7 @@ class User extends Authenticatable
             'approved_at'       => 'datetime',
             'otp_expires_at'    => 'datetime',
             'otp_verified'       => 'boolean',
+            'suspended_until'    => 'datetime',
         ];
     }
 
@@ -58,13 +62,13 @@ class User extends Authenticatable
         $universityDomains = [
             '@edouniversity.edu.ng'
         ];
-        
+
         foreach ($universityDomains as $domain) {
             if (str_ends_with($this->email, $domain)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -214,10 +218,17 @@ class User extends Authenticatable
     }
 
     public function unreadNotificationsByTypes(array $types)
-{
-    return $this->notifications()
-        ->whereIn('type', $types)
-        ->where('is_read', false)
-        ->count();
-}
+    {
+        return $this->notifications()
+            ->whereIn('type', $types)
+            ->where('is_read', false)
+            ->count();
+    }
+
+    public function dashboardRoute()
+    {
+        return ($this->hasRole('admin') || $this->role === 'admin')
+            ? route('admin.dashboard')
+            : route('dashboard');
+    }
 }

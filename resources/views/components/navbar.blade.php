@@ -35,11 +35,11 @@
                 Browse Jobs
             </a>
 
-            @if($isAdmin)
-             {{-- <a href="{{ route('admin.dashboard') }}"
+            {{-- @if($isAdmin)
+             <a href="{{ route('admin.dashboard') }}"
                 class="hover:text-[#1e3a8a] {{ request()->routeIs('admin.dashboard') ? 'text-[#1e3a8a] font-semibold' : '' }}">
                     Admin Dashboard
-                </a> --}}
+                </a>
 
                 <a href="{{ route('admin.users.pending') }}"
                    class="hover:text-[#1e3a8a] {{ request()->routeIs('admin.users.pending') ? 'text-[#1e3a8a] font-semibold' : '' }}">
@@ -50,7 +50,12 @@
                    class="hover:text-[#1e3a8a] {{ request()->routeIs('admin.users.all') ? 'text-[#1e3a8a] font-semibold' : '' }}">
                     All Approvals
                 </a>
-            @endif
+
+                <a href="{{ route('admin.disputes') }}"
+                class="hover:text-[#1e3a8a] {{ request()->routeIs('admin.disputes') ? 'text-[#1e3a8a] font-semibold' : '' }}">
+                    Disputes
+                </a>
+            @endif --}}
         </div>
 
         <!-- Right Side -->
@@ -145,6 +150,9 @@
 
                                                     @elseif($notification->type === 'application')
                                                         <i class="fa-solid fa-file-lines text-indigo-600"></i>
+
+                                                    @elseif($notification->type === 'payment_dispute')
+                                                        <i class="fa-solid fa-triangle-exclamation text-red-600"></i>
 
                                                     @else
                                                         <i class="fa-solid fa-bell text-blue-600"></i>
@@ -244,6 +252,16 @@
                              class="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
 
                             @if($isAdmin)
+                               <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                                    <i class="fa-solid fa-user-pen"></i>
+                                    <span>Edit Profile</span>
+                                </a>
+
+                                <a href="{{ route('admin.disputes') }}" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                    <span>Payment Disputes</span>
+                                </a>
+
                                 <a href="{{ route('admin.users.pending') }}" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
                                     <i class="fa-solid fa-user-check"></i>
                                     <span>Pending Approvals</span>

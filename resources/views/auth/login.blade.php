@@ -110,6 +110,24 @@
                     <p class="text-gray-600 mt-2">Access your Campus Connect account.</p>
                 </div>
 
+                            @if(session('error'))
+                <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-exclamation-circle"></i>
+                        <p class="text-sm">{{ session('error') }}</p>
+                    </div>
+                </div>
+            @endif
+
+            @if(session('success'))
+                <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <p class="text-sm">{{ session('success') }}</p>
+                    </div>
+                </div>
+            @endif
+
                 @if ($errors->any())
                     <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl">
                         <div class="flex items-center gap-2">
