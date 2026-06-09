@@ -37,6 +37,22 @@ class Booking extends Model
         'admin_dispute_note',
         'admin_payment_deadline_at',
         'dispute_status',
+        'paystack_reference',
+        'escrow_status',
+        'escrow_paid_at',
+        'provider_completed_at',
+        'auto_release_at',
+        'escrow_amount',
+        'platform_fee_percent',
+        'platform_fee',
+        'provider_payout',
+        'escrow_released_at',
+        'admin_hold',
+        'admin_hold_reason',
+        'admin_hold_at',
+        'admin_hold_by',
+        'client_deleted_at',
+        'provider_deleted_at',
     ];
 
     protected $casts = [
@@ -46,6 +62,14 @@ class Booking extends Model
         'payment_disputed_at' => 'datetime',
         'payment_resolved_at' => 'datetime',
         'admin_payment_deadline_at' => 'datetime',
+        'escrow_paid_at' => 'datetime',
+        'provider_completed_at' => 'datetime',
+        'auto_release_at' => 'datetime',
+        'escrow_released_at' => 'datetime',
+        'client_deleted_at' => 'datetime',
+        'provider_deleted_at' => 'datetime',
+        'admin_hold_at' => 'datetime',
+        'admin_hold' => 'boolean',
     ];
 
     public function skill()

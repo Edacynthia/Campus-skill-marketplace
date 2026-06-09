@@ -8,6 +8,8 @@ use App\Models\Skill;
 use App\Models\Rating;
 use App\Models\Message;
 use App\Models\Notification;
+use App\Mail\EscrowReleasedMail;
+use Illuminate\Support\Facades\Mail;
 
 class BookingController extends Controller
 {
@@ -331,10 +333,11 @@ class BookingController extends Controller
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
-        $myBookings = Booking::with(['skill', 'provider', 'ratings'])
-            ->where('client_id', auth()->id())
-            ->latest()
-            ->get();
+       $myBookings = Booking::with(['skill', 'provider', 'ratings'])
+        ->where('client_id', auth()->id())
+        ->whereNull('client_deleted_at')
+        ->latest()
+        ->get();
 
         return view('bookings.requests', compact('myBookings'));
     }
@@ -352,6 +355,7 @@ class BookingController extends Controller
 
         $myServiceBookings = Booking::with(['skill', 'client', 'ratings'])
             ->where('provider_id', auth()->id())
+            ->whereNull('provider_deleted_at')
             ->latest()
             ->get();
 
@@ -570,4 +574,236 @@ class BookingController extends Controller
 
         return back()->with('success', 'Your response and proof of payment have been submitted.');
     }
+    public function providerMarkCompleted($id)
+{
+    $booking = Booking::with(['skill', 'client', 'provider'])->findOrFail($id);
+
+    if ($booking->provider_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized action.'
+        ], 403);
+    }
+
+    if ($booking->escrow_status !== 'funded') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment must be funded in escrow before completion.'
+        ], 400);
+    }
+
+    $booking->update([
+        'status' => 'completed_waiting_payment',
+        'escrow_status' => 'completed',
+        'provider_completed_at' => now(),
+        'auto_release_at' => now()->addDays(3),
+    ]);
+
+    Notification::createNotification(
+        $booking->client_id,
+        'service_completed',
+        'Service Marked Completed',
+        'The provider marked your service as completed. Please confirm or open a dispute within 3 days.',
+        route('bookings.requests')
+    );
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Service marked as completed. Client has 3 days to confirm or dispute.'
+    ]);
+}
+
+public function clientConfirmServiceReceived($id)
+{
+    $booking = Booking::with(['skill', 'client', 'provider'])->findOrFail($id);
+
+    if ($booking->client_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized action.'
+        ], 403);
+    }
+
+    if ($booking->escrow_status !== 'completed') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Service must be completed before confirmation.'
+        ], 400);
+    }
+
+    if ($booking->admin_hold) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment is currently on admin hold.'
+        ], 400);
+    }
+
+    return $this->releaseEscrowPayment($booking);
+}
+
+public function clientOpenEscrowDispute(Request $request, $id)
+{
+    $request->validate([
+        'reason' => 'required|string|max:1000',
+    ]);
+
+    $booking = Booking::with(['skill', 'client', 'provider'])->findOrFail($id);
+
+    if ($booking->client_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized action.'
+        ], 403);
+    }
+
+    if (!in_array($booking->escrow_status, ['completed', 'release_pending'])) {
+        return response()->json([
+            'success' => false,
+            'message' => 'You can only dispute after the provider marks the work completed.'
+        ], 400);
+    }
+
+    $booking->update([
+        'escrow_status' => 'disputed',
+        'payment_status' => 'payment_disputed',
+        'payment_dispute_reason' => $request->reason,
+        'payment_disputed_at' => now(),
+        'payment_dispute_opened_by' => auth()->id(),
+        'payment_dispute_opened_by_role' => 'client',
+        'dispute_status' => 'open',
+        'admin_hold' => true,
+        'admin_hold_reason' => 'Client opened dispute: ' . $request->reason,
+        'admin_hold_at' => now(),
+    ]);
+
+    Notification::notifyAdmins(
+        'payment_dispute',
+        'Escrow Dispute Opened',
+        'A client opened a dispute for "' . ($booking->skill->title ?? 'a skill') . '".',
+        route('admin.disputes')
+    );
+
+    Notification::createNotification(
+        $booking->provider_id,
+        'payment_dispute',
+        'Escrow Payment Disputed',
+        'The client opened a dispute. Admin will review before payment is released.',
+        route('bookings.skills')
+    );
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Dispute opened. Admin will review.'
+    ]);
+}
+
+private function releaseEscrowPayment(Booking $booking)
+{
+    if ($booking->admin_hold || $booking->escrow_status === 'on_hold') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment cannot be released because it is on admin hold.'
+        ], 400);
+    }
+
+    if (!in_array($booking->escrow_status, ['completed', 'release_pending'])) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment is not ready for release.'
+        ], 400);
+    }
+
+    $booking->update([
+        'status' => 'done',
+        'escrow_status' => 'released',
+        'payment_status' => 'provider_confirmed_received',
+        'escrow_released_at' => now(),
+        'payment_resolved_at' => now(),
+    ]);
+
+    Notification::createNotification(
+        $booking->provider_id,
+        'escrow_released',
+        'Escrow Payment Released',
+        'Your escrow payment has been released for "' . ($booking->skill->title ?? 'your service') . '".',
+        route('bookings.skills')
+    );
+
+    Notification::createNotification(
+        $booking->client_id,
+        'escrow_released',
+        'Service Completed',
+        'Payment has been released and rating is now available.',
+        route('bookings.requests')
+    );
+
+    Mail::to($booking->provider->email)->queue(new EscrowReleasedMail($booking));
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Escrow payment released successfully.'
+    ]);
+}
+
+public function clientDeleteBooking($id)
+{
+    $booking = Booking::findOrFail($id);
+
+    if ($booking->client_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized action.'
+        ], 403);
+    }
+
+    if (
+        !in_array($booking->status, ['done', 'declined']) &&
+        !in_array($booking->escrow_status, ['released', 'disputed'])
+    ) {
+        return response()->json([
+            'success' => false,
+            'message' => 'You can only delete completed, declined, released, or disputed bookings.'
+        ], 400);
+    }
+
+    $booking->update([
+        'client_deleted_at' => now()
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Booking deleted from your list.'
+    ]);
+}
+
+public function providerDeleteBooking($id)
+{
+    $booking = Booking::findOrFail($id);
+
+    if ($booking->provider_id !== auth()->id()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized action.'
+        ], 403);
+    }
+
+    if (
+        !in_array($booking->status, ['done', 'declined']) &&
+        !in_array($booking->escrow_status, ['released', 'disputed'])
+    ) {
+        return response()->json([
+            'success' => false,
+            'message' => 'You can only delete completed, declined, released, or disputed bookings.'
+        ], 400);
+    }
+
+    $booking->update([
+        'provider_deleted_at' => now()
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Booking deleted from your list.'
+    ]);
+}
 }

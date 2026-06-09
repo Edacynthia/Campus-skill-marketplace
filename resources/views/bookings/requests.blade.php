@@ -17,8 +17,10 @@
 
             @if ($myBookings->count() > 0)
                 <div class="space-y-4">
+
                     @foreach ($myBookings as $booking)
-                        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                        <div id="booking-card-{{ $booking->id }}"
+                            class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
 
                             <div class="flex flex-col sm:flex-row justify-between gap-4">
                                 <div class="flex-1">
@@ -39,16 +41,25 @@
                                     @endif
                                 </div>
 
-                                <span
-                                    class="h-fit text-xs px-3 py-1 rounded-full font-medium
-                                @if ($booking->status === 'interested') bg-amber-50 text-amber-700
-                                @elseif($booking->status === 'confirmed') bg-blue-50 text-blue-700
-                                @elseif($booking->status === 'in_progress') bg-indigo-50 text-indigo-700
-                                @elseif($booking->status === 'completed_waiting_payment') bg-emerald-50 text-emerald-700
-                                @elseif($booking->status === 'done') bg-green-50 text-green-700
-                                @else bg-red-50 text-red-700 @endif">
-                                    {{ $booking->statusLabel() }}
-                                </span>
+                                <div class="flex items-start gap-3">
+                                    <span
+                                        class="h-fit text-xs px-3 py-1 rounded-full font-medium
+        @if ($booking->status === 'interested') bg-amber-50 text-amber-700
+        @elseif($booking->status === 'confirmed') bg-blue-50 text-blue-700
+        @elseif($booking->status === 'in_progress') bg-indigo-50 text-indigo-700
+        @elseif($booking->status === 'completed_waiting_payment') bg-emerald-50 text-emerald-700
+        @elseif($booking->status === 'done') bg-green-50 text-green-700
+        @else bg-red-50 text-red-700 @endif">
+                                        {{ $booking->statusLabel() }}
+                                    </span>
+
+                                    @if (in_array($booking->status, ['done', 'declined']) || in_array($booking->escrow_status, ['released', 'disputed']))
+                                        <button onclick="deleteClientBooking({{ $booking->id }})"
+                                            class="text-red-500 hover:text-red-700 transition" title="Delete booking">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
 
                             <div class="mt-4 border-t pt-4 space-y-5">
@@ -126,27 +137,96 @@
                                     </div>
                                 @endif
 
-                                @if ($booking->status === 'completed_waiting_payment' && $booking->payment_status === 'unpaid')
-                                    <button onclick="clientMarkedPaid({{ $booking->id }})"
-                                        class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
-                                        I Have Paid
-                                    </button>
-                                @elseif($booking->payment_status === 'client_marked_paid')
-                                    <div
-                                        class="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-sm">
-                                        Waiting for provider to confirm payment.
-                                    </div>
-                                @elseif($booking->payment_status === 'payment_disputed')
-                                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                        <p class="text-sm text-red-700 font-semibold">
-                                            Payment dispute opened. Admin reviewing issue.
+                                @if ($booking->status === 'confirmed' && $booking->escrow_status === 'not_funded')
+                                    <form action="{{ route('bookings.payEscrow', $booking->id) }}"method="POST"
+                                        onsubmit="showEscrowLoading({{ $booking->id }})">
+                                        @csrf
+
+                                        <button type="submit" id="escrowBtn-{{ $booking->id }}"
+                                            class="px-4 py-2 bg-[#1e3a8a] text-white rounded-lg hover:bg-[#0f2b5e] transition-all">
+
+                                            <span class="escrow-btn-text">
+                                                Pay Into Escrow
+                                            </span>
+
+                                            <span class="escrow-btn-loading hidden">
+                                                <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+                                                Redirecting...
+                                            </span>
+
+                                        </button>
+                                    </form>
+                                @elseif($booking->escrow_status === 'funded')
+                                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <p class="font-semibold text-blue-700">
+                                            Payment Secured In Escrow
                                         </p>
 
-                                        @if ($booking->payment_dispute_reason)
-                                            <p class="text-sm text-red-600 mt-1">
-                                                Provider's message: {{ $booking->payment_dispute_reason }}
+                                        <p class="text-sm text-blue-600 mt-1">
+                                            The provider has been notified and can begin work.
+                                        </p>
+                                    </div>
+                                @elseif($booking->escrow_status === 'completed')
+                                    <div class="flex flex-wrap gap-3">
+
+                                        <button onclick="showReleaseConfirmation({{ $booking->id }})"
+                                            class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                                            Confirm Service Received
+                                        </button>
+
+                                        <button onclick="showDisputeBox({{ $booking->id }})"
+                                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                            Open Dispute
+                                        </button>
+
+                                    </div>
+
+                                    <div id="escrow-dispute-box-{{ $booking->id }}" class="hidden mt-3">
+
+                                        <textarea id="escrow-dispute-reason-{{ $booking->id }}" rows="3" class="w-full border rounded-lg p-3"
+                                            placeholder="Explain the issue with the completed work"></textarea>
+
+                                        <button onclick="openEscrowDispute({{ $booking->id }})"
+                                            class="mt-2 px-4 py-2 bg-red-700 text-white rounded-lg">
+                                            Submit Dispute
+                                        </button>
+
+                                    </div>
+                                @elseif($booking->escrow_status === 'disputed')
+                                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                        <p class="font-semibold text-red-700">
+                                            Escrow Dispute Opened
+                                        </p>
+
+                                        <p class="text-sm text-red-600 mt-1">
+                                            Admin is reviewing the dispute.
+                                        </p>
+                                    </div>
+                                @elseif($booking->escrow_status === 'released')
+                                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                        <p class="font-semibold text-green-700">
+                                            ✅ Service Confirmed & Payment Released
+                                        </p>
+
+                                        <p class="text-sm text-green-600 mt-1">
+                                            You confirmed that the service was completed satisfactorily.
+                                            The escrow payment has been released to the provider.
+                                        </p>
+
+                                        <div class="mt-3 p-3 bg-white rounded-lg border border-green-100">
+                                            <p class="text-sm">
+                                                Service Amount:
+                                                <strong>₦{{ number_format($booking->escrow_amount ?? $booking->skill->price, 2) }}</strong>
                                             </p>
-                                        @endif
+
+                                            <p class="text-sm text-green-700 font-medium">
+                                                Provider has been paid successfully.
+                                            </p>
+                                        </div>
+
+                                        <p class="text-xs text-green-600 mt-3">
+                                            You can now leave a rating and review for this provider.
+                                        </p>
                                     </div>
                                 @endif
 
@@ -207,23 +287,137 @@
         </div>
     </div>
 
-    <script>
-        function clientMarkedPaid(bookingId) {
-            if (!confirm('Confirm that you have paid the provider?')) return;
+    <div id="releasePaymentModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
 
-            fetch(`/bookings/${bookingId}/client-paid`, {
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4">
+
+            <div class="p-6">
+
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xl"></i>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">
+                            Confirm Service Completion
+                        </h3>
+                    </div>
+                </div>
+
+                <div class="space-y-3 text-sm text-gray-700">
+
+                    <p>
+                        You are about to release the escrow payment to the provider.
+                    </p>
+
+                    <ul class="space-y-2">
+                        <li>✓ The service was completed satisfactorily</li>
+                        <li>✓ The work delivered matches what was agreed</li>
+                        <li>✓ You do not have any unresolved issues</li>
+                        <li>✓ You do not wish to open a dispute</li>
+                    </ul>
+
+                    <div class="p-3 rounded-lg bg-red-50 border border-red-200">
+                        <p class="text-red-700 font-medium">
+                            Once payment is released, it may not be possible to recover the funds through the escrow system.
+                        </p>
+                    </div>
+
+                    <p>
+                        If there is any issue with the service, close this window and open a dispute instead.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap gap-3 mt-6">
+
+                    <button onclick="closeReleaseConfirmation()"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+
+                        Cancel
+
+                    </button>
+
+                    <button onclick="goToDispute()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+
+                        Open Dispute Instead
+
+                    </button>
+
+                    <button id="confirmReleaseBtn"
+                        class="ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+
+                        Yes, Release Payment
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function confirmServiceReceived(bookingId) {
+            if (!confirm('Confirm that the service was completed successfully?')) return;
+
+            fetch(`/bookings/${bookingId}/confirm-received`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                         'Accept': 'application/json'
                     }
                 })
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(data => {
-                    if (data.success) location.reload();
-                    else alert(data.message || 'Error confirming payment');
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+
+        function showDisputeBox(bookingId) {
+            const box = document.getElementById(`escrow-dispute-box-${bookingId}`);
+
+            if (box) {
+                box.classList.toggle('hidden');
+            }
+        }
+
+        function openEscrowDispute(bookingId) {
+            const reason =
+                document.getElementById(`escrow-dispute-reason-${bookingId}`).value;
+
+            if (!reason.trim()) {
+                alert('Please explain the issue.');
+                return;
+            }
+
+            fetch(`/bookings/${bookingId}/escrow-dispute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        reason: reason
+                    })
                 })
-                .catch(() => alert('Error confirming payment'));
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                });
         }
 
         function setBookingInlineRating(bookingId, rating) {
@@ -278,6 +472,123 @@
                     }
                 })
                 .catch(() => alert('Error submitting rating'));
+        }
+
+        function deleteClientBooking(id) {
+
+            if (!confirm('Delete this booking from your list?')) {
+                return;
+            }
+
+            fetch(`/bookings/${id}/client-delete`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+
+                    if (data.success) {
+
+                        const card = document.getElementById(`booking-card-${id}`);
+
+                        if (card) {
+
+                            card.style.transition = 'all 0.3s ease';
+                            card.style.opacity = '0';
+
+                            setTimeout(() => {
+                                card.remove();
+                            }, 300);
+                        }
+
+                        const toast = document.createElement('div');
+
+                        toast.className =
+                            'fixed top-5 right-5 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg z-50';
+
+                        toast.innerHTML =
+                            '<i class="fa-solid fa-check-circle mr-2"></i>' +
+                            (data.message || 'Booking deleted successfully.');
+
+                        document.body.appendChild(toast);
+
+                        setTimeout(() => {
+                            toast.remove();
+                        }, 3000);
+
+                    } else {
+
+                        alert(data.message || 'Could not delete booking.');
+
+                    }
+
+                })
+                .catch(() => {
+                    alert('Error deleting booking.');
+                });
+        }
+
+        let currentBookingId = null;
+
+        function showReleaseConfirmation(bookingId) {
+            currentBookingId = bookingId;
+
+            const modal = document.getElementById('releasePaymentModal');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeReleaseConfirmation() {
+            const modal = document.getElementById('releasePaymentModal');
+
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function goToDispute() {
+            closeReleaseConfirmation();
+
+            alert(
+                'Please use the dispute button on this booking if there is an issue with the service.'
+            );
+        }
+
+        const confirmBtn = document.getElementById('confirmReleaseBtn');
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+
+                closeReleaseConfirmation();
+
+                confirmServiceReceived(currentBookingId);
+
+            });
+        }
+
+        function showEscrowLoading(bookingId) {
+            const button =
+                document.getElementById(`escrowBtn-${bookingId}`);
+
+            if (!button) return true;
+
+            button.disabled = true;
+
+            button.classList.add(
+                'opacity-75',
+                'cursor-not-allowed'
+            );
+
+            button.querySelector('.escrow-btn-text')
+                ?.classList.add('hidden');
+
+            button.querySelector('.escrow-btn-loading')
+                ?.classList.remove('hidden');
+
+            return true;
         }
     </script>
 @endsection

@@ -13,6 +13,7 @@ use App\Http\Controllers\JobProgressController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PaymentController;
 
 
 use App\Http\Controllers\SkillController;
@@ -94,6 +95,12 @@ Route::get('/approval-pending', function () {
 Route::middleware(['auth', 'approved', 'check.status'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::post('/bookings/{id}/pay-escrow', [PaymentController::class, 'payEscrow'])
+    ->name('bookings.payEscrow');
+
+Route::get('/bookings/escrow/callback', [PaymentController::class, 'escrowCallback'])
+    ->name('bookings.escrow.callback');
+
     // Profile Routes
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -151,6 +158,11 @@ Route::middleware(['auth', 'approved', 'check.status'])->group(function () {
     Route::post('/bookings/{id}/client-paid', [BookingController::class, 'clientMarkedPaid'])->name('bookings.clientPaid');
     Route::post('/bookings/{id}/payment-received', [BookingController::class, 'providerReceivedPayment'])->name('bookings.paymentReceived');
     Route::post('/bookings/{id}/payment-not-received', [BookingController::class, 'providerPaymentNotReceived'])->name('bookings.paymentNotReceived');
+    Route::post('/bookings/{id}/provider-completed', [BookingController::class, 'providerMarkCompleted'])->name('bookings.providerCompleted');
+    Route::post('/bookings/{id}/confirm-received', [BookingController::class, 'clientConfirmServiceReceived'])->name('bookings.confirmReceived');
+    Route::post('/bookings/{id}/escrow-dispute', [BookingController::class, 'clientOpenEscrowDispute'])->name('bookings.escrowDispute');
+    Route::delete('/bookings/{id}/client-delete',[BookingController::class, 'clientDeleteBooking'])->name('bookings.clientDelete');
+    Route::delete('/bookings/{id}/provider-delete',[BookingController::class, 'providerDeleteBooking'])->name('bookings.providerDelete');
     // Payment Dispute Routes
     Route::get('/bookings/{booking}/dispute', [BookingController::class, 'showDispute'])->name('bookings.dispute.show');
     Route::post('/bookings/{booking}/dispute-response', [BookingController::class, 'submitDisputeResponse'])->name('bookings.dispute.response');
@@ -209,3 +221,15 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 Route::get('/jobs/{id}', [JobController::class, 'show'])->name('jobs.show');
 Route::get('/skills/{id}', [SkillController::class, 'show'])->name('skills.show');
 Route::get('/profile/{id}', [ProfileController::class, 'show'])->name('profile.show');
+
+
+use App\Http\Controllers\PaystackTestController;
+
+Route::get('/paystack-test', [PaystackTestController::class, 'index'])
+    ->name('paystack.test.index');
+
+Route::post('/paystack-test/pay', [PaystackTestController::class, 'initialize'])
+    ->name('paystack.test.pay');
+
+Route::get('/paystack-test/callback', [PaystackTestController::class, 'callback'])
+    ->name('paystack.test.callback');
