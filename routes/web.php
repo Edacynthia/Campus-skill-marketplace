@@ -95,11 +95,11 @@ Route::get('/approval-pending', function () {
 Route::middleware(['auth', 'approved', 'check.status'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::post('/bookings/{id}/pay-escrow', [PaymentController::class, 'payEscrow'])
-    ->name('bookings.payEscrow');
+    Route::post('/applications/{id}/pay-escrow', [PaymentController::class, 'payJobEscrow'])->name('applications.payEscrow');
+    Route::get('/applications/escrow/callback', [PaymentController::class, 'jobEscrowCallback'])->name('jobs.escrow.callback');
 
-Route::get('/bookings/escrow/callback', [PaymentController::class, 'escrowCallback'])
-    ->name('bookings.escrow.callback');
+    Route::post('/bookings/{id}/pay-escrow', [PaymentController::class, 'payEscrow'])->name('bookings.payEscrow');
+    Route::get('/bookings/escrow/callback', [PaymentController::class, 'escrowCallback'])->name('bookings.escrow.callback');
 
     // Profile Routes
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -125,9 +125,14 @@ Route::get('/bookings/escrow/callback', [PaymentController::class, 'escrowCallba
     Route::patch('/jobs/{id}/close', [JobController::class, 'close'])->name('jobs.close');
     Route::patch('/jobs/{id}/reopen', [JobController::class, 'reopen'])->name('jobs.reopen');
 
+    Route::get('/received-applications/{id}/view', [ApplicationController::class, 'viewReceived'])
+    ->name('applications.received.view');
+
     // Application editing routes
     Route::patch('/applications/{id}', [JobController::class, 'editApplication'])->name('applications.edit');
     Route::delete('/applications/{id}', [JobController::class, 'withdrawApplication'])->name('applications.withdraw');
+
+    Route::post('/applications/{id}/dispute', [JobProgressController::class, 'openDispute'])->name('applications.dispute');
 
     // Application progress routes
     Route::post('/applications/{id}/accept', [JobProgressController::class, 'accept'])->name('applications.accept');
@@ -207,14 +212,19 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/users/{user}/activate', [AdminController::class, 'activateUser'])->name('users.activate');
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::get('/disputes', [AdminController::class, 'disputes'])->name('disputes');
-
     Route::post('/disputes/{booking}/warn-client', [AdminController::class, 'warnClient'])->name('disputes.warnClient');
-
     Route::post('/disputes/{booking}/request-proof', [AdminController::class, 'requestPaymentProof'])->name('disputes.requestProof');
-
     Route::post('/disputes/{booking}/resolve', [AdminController::class, 'resolveDispute'])->name('disputes.resolve');
-
     Route::post('/disputes/{booking}/dismiss', [AdminController::class, 'dismissDispute'])->name('disputes.dismiss');
+    Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
+    Route::get('/job-disputes', [AdminController::class, 'jobDisputes'])
+    ->name('jobDisputes');
+
+Route::post('/job-disputes/{application}/release', [AdminController::class, 'releaseJobPayment'])
+    ->name('jobDisputes.release');
+
+Route::post('/job-disputes/{application}/refund', [AdminController::class, 'refundJobPayment'])
+    ->name('jobDisputes.refund');
 });
 
 // ====================== WILDCARD ROUTES LAST ======================

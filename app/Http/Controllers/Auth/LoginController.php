@@ -25,7 +25,7 @@ class LoginController extends Controller
     {
         $request->validate([
             'email'    => 'required|email',
-            'password' => 'required',
+            'password' => 'required|min:10',
         ]);
 
         return $this->otpController->checkOTPRequirement($request);

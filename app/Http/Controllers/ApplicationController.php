@@ -63,4 +63,16 @@ class ApplicationController extends Controller
 
         return view('applications.show', compact('application'));
     }
+
+    public function viewReceived($id)
+{
+    $application = JobApplication::with(['job.employer', 'applicant', 'ratings'])
+        ->findOrFail($id);
+
+    if ($application->job->employer_id !== auth()->id()) {
+        abort(403, 'Unauthorized');
+    }
+
+    return view('applications.received-view', compact('application'));
+}
 }

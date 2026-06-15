@@ -16,7 +16,12 @@ class JobController extends Controller
         // Debug: Log all request parameters
         \Log::info('JobController index called with params: ' . json_encode($request->all()));
 
-        $query = Job::with('employer')->where('status', 'active');
+       $query = Job::with('employer')
+    ->where('status', 'active')
+    ->whereDoesntHave('applications', function ($q) {
+        $q->whereIn('progress', ['confirmed'])
+          ->whereIn('escrow_status', ['released', 'refunded']);
+    });
 
         // Search functionality
         if ($request->has('search') && !empty($request->search)) {
@@ -88,11 +93,15 @@ class JobController extends Controller
         $jobs = $query->paginate(12);
 
         // Get categories for filter
-        $categories = Job::where('status', 'active')
-            ->distinct()
-            ->pluck('category')
-            ->filter()
-            ->sort();
+       $categories = Job::where('status', 'active')
+    ->whereDoesntHave('applications', function ($q) {
+        $q->whereIn('progress', ['confirmed'])
+          ->whereIn('escrow_status', ['released', 'refunded']);
+    })
+    ->distinct()
+    ->pluck('category')
+    ->filter()
+    ->sort();
 
         return view('jobs.index', compact('jobs', 'categories'));
     }
@@ -161,7 +170,7 @@ class JobController extends Controller
         // Check if user has already applied
         $existingApplication = $job->applications()
             ->where('applicant_id', auth()->id())
-            ->whereIn('status', ['pending', 'accepted'])
+           ->whereNotIn('status', ['declined', 'withdrawn', 'rejected'])
             ->first();
 
         if ($existingApplication) {

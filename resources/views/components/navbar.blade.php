@@ -25,16 +25,27 @@
 
         <!-- Desktop Menu -->
         <div class="hidden md:flex items-center gap-8 text-sm font-medium">
-            <a href="{{ route('skills.index') }}"
-               class="hover:text-[#1e3a8a] {{ request()->routeIs('skills.index') ? 'text-[#1e3a8a] font-semibold' : '' }}">
-                Browse Skills
-            </a>
+           <a href="{{ route('skills.index') }}"
+   class="relative py-2 hover:text-[#1e3a8a]
+          after:absolute after:left-0 after:-bottom-[22px]
+          after:h-[3px] after:bg-[#1e3a8a]
+          after:transition-all after:duration-300
+          {{ request()->routeIs('skills.index')
+                ? 'text-[#1e3a8a] font-semibold after:w-full'
+                : 'after:w-0 hover:after:w-full' }}">
+    Browse Skills
+</a>
 
-            <a href="{{ route('jobs.index') }}"
-               class="hover:text-[#1e3a8a] {{ request()->routeIs('jobs.index') ? 'text-[#1e3a8a] font-semibold' : '' }}">
-                Browse Jobs
-            </a>
-
+<a href="{{ route('jobs.index') }}"
+   class="relative py-2 hover:text-[#1e3a8a]
+          after:absolute after:left-0 after:-bottom-[22px]
+          after:h-[3px] after:bg-[#1e3a8a]
+          after:transition-all after:duration-300
+          {{ request()->routeIs('jobs.index')
+                ? 'text-[#1e3a8a] font-semibold after:w-full'
+                : 'after:w-0 hover:after:w-full' }}">
+    Browse Jobs
+</a>
             {{-- @if($isAdmin)
              <a href="{{ route('admin.dashboard') }}"
                 class="hover:text-[#1e3a8a] {{ request()->routeIs('admin.dashboard') ? 'text-[#1e3a8a] font-semibold' : '' }}">

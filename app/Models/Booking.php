@@ -70,6 +70,8 @@ class Booking extends Model
         'provider_deleted_at' => 'datetime',
         'admin_hold_at' => 'datetime',
         'admin_hold' => 'boolean',
+        'payment_confirmed_at' => 'datetime',
+        'provider_payment_confirmed_at' => 'datetime',
     ];
 
     public function skill()
@@ -119,4 +121,9 @@ class Booking extends Model
     {
         return $this->belongsTo(User::class, 'payment_dispute_opened_by');
     }
+
+    public function adminHoldBy()
+{
+    return $this->belongsTo(User::class, 'admin_hold_by');
+}
 }

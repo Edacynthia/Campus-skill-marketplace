@@ -19,7 +19,30 @@ class JobApplication extends Model
         'started_at',
         'completed_at',
         'confirmed_at',
-        'revision_note'
+        'revision_note',
+        'paystack_reference',
+        'escrow_status',
+        'escrow_paid_at',
+        'worker_completed_at',
+        'auto_release_at',
+        'escrow_released_at',
+        'escrow_amount',
+        'platform_fee_percent',
+        'platform_fee',
+        'worker_payout',
+        'admin_hold',
+        'admin_hold_reason',
+        'admin_hold_at',
+        'admin_hold_by',
+        'delivery_note',
+        'delivery_file',
+        'delivery_screenshots',
+        'delivery_link',
+        'revision_count',
+        'dispute_reason',
+        'disputed_at',
+        'refund_reason',
+        'refunded_at',
     ];
 
     protected $casts = [
@@ -28,7 +51,16 @@ class JobApplication extends Model
         'completed_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
+        'escrow_paid_at' => 'datetime',
+        'worker_completed_at' => 'datetime',
+        'auto_release_at' => 'datetime',
+        'escrow_released_at' => 'datetime',
+        'admin_hold_at' => 'datetime',
+        'admin_hold' => 'boolean',
+        'disputed_at' => 'datetime',
+        'delivery_screenshots' => 'array',
+        'refunded_at' => 'datetime',
     ];
 
     public function job()
@@ -62,24 +94,33 @@ class JobApplication extends Model
     }
 
     public function progressPercentage()
-    {
-        return match($this->progress) {
-            'pending' => 0,
-            'in_progress' => 50,
-            'completed' => 75,
-            'confirmed' => 100,
-            default => 0
-        };
+{
+    // Disputed state overrides progress-based percentage
+    if ($this->escrow_status === 'disputed') {
+        return 75; // stays at "completed" visually
     }
 
-    public function progressLabel()
-    {
-        return match($this->progress) {
-            'pending' => 'Pending',
-            'in_progress' => 'In Progress',
-            'completed' => 'Completed',
-            'confirmed' => 'Confirmed',
-            default => 'Unknown'
-        };
+    return match($this->progress) {
+        'pending'     => 0,
+        'in_progress' => 50,
+        'completed'   => 75,
+        'confirmed'   => 100,
+        default       => 0
+    };
+}
+
+public function progressLabel()
+{
+    if ($this->escrow_status === 'disputed') {
+        return 'Under Dispute';
     }
+
+    return match($this->progress) {
+        'pending'     => 'Pending',
+        'in_progress' => 'In Progress',
+        'completed'   => 'Completed',
+        'confirmed'   => 'Confirmed',
+        default       => 'Unknown'
+    };
+}
 }

@@ -148,7 +148,7 @@
                     <div>
                         <h3 class="text-white font-bold text-xl mb-1">Have a task? Post a job.</h3>
                         <p class="text-blue-200 text-sm leading-relaxed">Describe what you need, set your budget, and let campus talent come to you.</p>
-                        <a href="#"
+                        <a href="{{ route('register') }}"
                            class="inline-flex items-center mt-3 text-sm font-semibold text-emerald-300 hover:text-emerald-200 transition-colors group-hover:gap-2">
                             Post a Job 
                             <i class="fa-solid fa-arrow-right ml-1 group-hover:ml-2 transition-all"></i>

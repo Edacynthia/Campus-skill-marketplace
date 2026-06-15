@@ -134,6 +134,7 @@
                         <input type="password"
                                name="password"
                                id="password"
+                               minlength="10"
                                required
                                class="w-full px-4 py-4 pr-12 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a]">
 
@@ -152,7 +153,7 @@
                     <div id="password-requirements" class="hidden mt-3 text-sm">
                         <p class="text-gray-600 mb-2 font-medium">Password must contain:</p>
                         <ul class="space-y-1 text-gray-500 text-[13px]">
-                            <li id="req-length">• At least 8 characters</li>
+                            <li id="req-length">• At least 10 characters</li>
                             <li id="req-upper">• One uppercase letter</li>
                             <li id="req-lower">• One lowercase letter</li>
                             <li id="req-number">• One number</li>
@@ -168,6 +169,7 @@
                         <input type="password"
                                name="password_confirmation"
                                id="password_confirmation"
+                               minlength="10"
                                required
                                class="w-full px-4 py-4 pr-12 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a]">
 

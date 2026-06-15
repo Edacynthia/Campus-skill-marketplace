@@ -167,6 +167,7 @@
                             <input type="password"
                                    name="password"
                                    id="password"
+                                   minlength="10"
                                    required
                                    placeholder="••••••"
                                    class="w-full px-4 py-4 pr-12 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1e3a8a] transition-all">
